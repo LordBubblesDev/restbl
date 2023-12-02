@@ -1,4 +1,4 @@
-# RESTBL Tool
+# RESTBL-CLI
 RESTBL-CLI is a simple rewrite of dt12345's tool to work with command-line arguments instead of a GUI with buttons.
 
 This is a tool for working with and merging RESTBL files in *Tears of the Kingdom*. RESTBL files are used by the game's resource system to decide how much memory it should allocate for each file. Each entry in a RESTBL file contains a CRC32 hash of the corresponding file's path and its allocation size. The allocated size as listed in the RESTBL is not exactly equal to the size of the file, it is slightly larger.
