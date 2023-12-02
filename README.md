@@ -36,7 +36,7 @@ When using `merge-mods`, the argument `--mod-path C:\Path\to\mods` is required. 
 ### merge-restbl
 This option will create a merged RESTBL file from the two provided RESTBL files. Similar to the previous option, using `--compress` will compress the generated RESTBL file with Zstd compression.
 
-> restbl-cli.exe --action merge-restbl --restbl-path0 "C:\path\to\file1\ResourceSizeTable.Product.120.rsizetable.zs" --restbl-path1 "C:\path\to\file2\ResourceSizeTable.Product.120.rsizetable.zs"
+> restbl-cli.exe --action merge-restbl --restbl-path0 "C:\path\to\file1\ResourceSizeTable.Product.120.rsizetable.zs" --restbl-path1 "C:\path\to\file2\ResourceSizeTable.Product.120.rsizetable.zs" --compress
 
 
 ### generate-changelog
