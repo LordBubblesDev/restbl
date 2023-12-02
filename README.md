@@ -4,7 +4,7 @@ RESTBL Tool is a simple tool for working with and merging RESTBL files in *Tears
 When developing or using mods, the RESTBL oftens becomes an issue as changes to file sizes may lead to the existing RESTBL entry becoming too small. This will result in the game crashing when it attempts to load in said resource. As a result, many mods come with edited RESTBL files, tailored for that specific mod. The issue arises when you have multiple mods all requiring RESTBL edits. This tool aims to solve that issue by automating the process without the need for external changelog files (such as YAML patches or .rcl files).
 
 ## Usage
-To use the tool, simply download `restbl.exe` and run it from the command line using `restbl -h` to get all available options. There are four options to choose from: merge-mods, Select RESTBL to Merge, Generate Changelog, Apply Patches.
+To use the tool, simply download `restbl-cli.exe` and run it from the command line using `restbl -h` to get all available options. There are four options to choose from: merge-mods, Select RESTBL to Merge, Generate Changelog, Apply Patches.
 
 ### merge-mods
 This option will analyze the provided mod directories and automatically generate an edited RESTBL file.
@@ -30,13 +30,13 @@ When using `merge-mods`, the argument `--mod-path C:\Path\to\mods` is required. 
         └── romfs
 ```
 ```
-restbl.exe --action merge-mods --mod-path "C:\Users\username\AppData\Roaming\Ryujinx\mods\contents\0100f2c0115b6000" --use-checksums --compress
+restbl-cli.exe --action merge-mods --mod-path "C:\Users\username\AppData\Roaming\Ryujinx\mods\contents\0100f2c0115b6000" --use-checksums --compress
 ```
 
 ### merge-restbl
 This option will create a merged RESTBL file from the two provided RESTBL files. Similar to the previous option, using `--compress` will compress the generated RESTBL file with Zstd compression.
 ```
-restbl.exe --action merge-restbl --restbl-path0 "C:\path\to\file1\ResourceSizeTable.Product.120.rsizetable.zs" --restbl-path1 "C:\path\to\file2\ResourceSizeTable.Product.120.rsizetable.zs"
+restbl-cli.exe --action merge-restbl --restbl-path0 "C:\path\to\file1\ResourceSizeTable.Product.120.rsizetable.zs" --restbl-path1 "C:\path\to\file2\ResourceSizeTable.Product.120.rsizetable.zs"
 ```
 
 ### generate-changelog
