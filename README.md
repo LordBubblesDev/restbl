@@ -1,10 +1,12 @@
 # RESTBL Tool
-RESTBL Tool is a simple tool for working with and merging RESTBL files in *Tears of the Kingdom*. RESTBL files are used by the game's resource system to decide how much memory it should allocate for each file. Each entry in a RESTBL file contains a CRC32 hash of the corresponding file's path and its allocation size. The allocated size as listed in the RESTBL is not exactly equal to the size of the file, it is slightly larger.
+RESTBL-CLI is a simple rewrite of dt12345's tool to work with command-line arguments instead of a GUI with buttons.
+
+This is a tool for working with and merging RESTBL files in *Tears of the Kingdom*. RESTBL files are used by the game's resource system to decide how much memory it should allocate for each file. Each entry in a RESTBL file contains a CRC32 hash of the corresponding file's path and its allocation size. The allocated size as listed in the RESTBL is not exactly equal to the size of the file, it is slightly larger.
 
 When developing or using mods, the RESTBL oftens becomes an issue as changes to file sizes may lead to the existing RESTBL entry becoming too small. This will result in the game crashing when it attempts to load in said resource. As a result, many mods come with edited RESTBL files, tailored for that specific mod. The issue arises when you have multiple mods all requiring RESTBL edits. This tool aims to solve that issue by automating the process without the need for external changelog files (such as YAML patches or .rcl files).
 
 ## Usage
-To use the tool, simply download `restbl-cli.exe` and run it from the command line using `restbl -h` to get all available options. There are four options to choose from: merge-mods, Select RESTBL to Merge, Generate Changelog, Apply Patches.
+To use the tool, simply download `restbl-cli.exe` and run it from the command line using `restbl -h` to get all available options. There are four options to choose from: merge-mods, merge-restbl, generate-changelog, apply-patches
 
 ### merge-mods
 This option will analyze the provided mod directories and automatically generate an edited RESTBL file.
