@@ -5,13 +5,24 @@ except ImportError:
 import sarc
 import os
 import io
+import sys
+
+def get_correct_path(relative_path):
+    try:
+        base_path = sys._MEIPASS
+    except Exception:
+        base_path = os.path.abspath(".")
+
+    return os.path.join(base_path, relative_path)
 
 class Zstd:
     # Initialize decompressor
-    def __init__(self, romfs_path, format=zs.FORMAT_ZSTD1): # zs.FORMAT_ZSTD1_MAGICLESS for headerless
+    def __init__(self, format=zs.FORMAT_ZSTD1): # zs.FORMAT_ZSTD1_MAGICLESS for headerless
         self.format = format
+        zsdic_dir = "dic/ZsDic.pack.zs"
+        zsdic_dir = get_correct_path(zsdic_dir)
         self.decompressor = zs.ZstdDecompressor()
-        with open(os.path.join(romfs_path,"Pack/ZsDic.pack.zs"), 'rb') as file:
+        with open(os.path.join(zsdic_dir), 'rb') as file:
             data = file.read()
         self.dictionaries = self.decompressor.decompress(data)
         self.dictionaries = sarc.Sarc(self.dictionaries)
