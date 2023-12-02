@@ -667,7 +667,7 @@ def open_tool():
     merge_mods_group.add_argument('--mod-path', type=str, help='(Mandatory) Path to the mod directory')
     merge_mods_group.add_argument('--version', type=int, default=121, help='(Optional) TotK version - default: 121')
     merge_mods_group.add_argument('--use-existing-restbl', action='store_true', help='(Optional) Use existing RESTBL')
-    merge_mods_group.add_argument('--restbl-path', type=str, help='(Optional) Path to the RESTBL file (only if --use-existing-restbl is used)')
+    merge_mods_group.add_argument('--restbl-path', type=str, help='(Optional) Path to the RESTBL file to use')
     merge_mods_group.add_argument('--delete-existing-restbl', action='store_true', help='(Optional) Delete existing RESTBL')
     merge_mods_group.add_argument('--use-checksums', action='store_true', help='(Optional) Use checksums')
 
@@ -683,8 +683,8 @@ def open_tool():
 
     # Arguments for 'apply-patches' action
     apply_patches_group = parser.add_argument_group('apply-patches')
-    apply_patches_group.add_argument('--patch-restbl', type=str, help='(Mandatory) Path to the RESTBL file')
-    apply_patches_group.add_argument('--patches-path', type=str, help='(Mandatory) Path to the patches folder')
+    apply_patches_group.add_argument('--patch-restbl', type=str, help='(Mandatory) Path to the RESTBL file to patch')
+    apply_patches_group.add_argument('--patches-path', type=str, help='(Mandatory) Path to the folder containing patches (rcl, yaml, json)')
 
     args = parser.parse_args()
 
