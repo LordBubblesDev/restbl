@@ -1,5 +1,5 @@
 # RESTBL-CLI
-RESTBL-CLI is a simple rewrite of dt12345's tool to work with command-line arguments instead of a GUI with buttons.
+RESTBL-CLI is a simple rewrite of dt12345's tool [(RESTBL)](https://github.com/dt-12345/totktools) to work with command-line arguments instead of a GUI with buttons.
 
 This is a tool for working with and merging RESTBL files in *Tears of the Kingdom*. RESTBL files are used by the game's resource system to decide how much memory it should allocate for each file. Each entry in a RESTBL file contains a CRC32 hash of the corresponding file's path and its allocation size. The allocated size as listed in the RESTBL is not exactly equal to the size of the file, it is slightly larger.
 
@@ -31,22 +31,25 @@ When using `merge-mods`, the argument `--mod-path C:\Path\to\mods` is required. 
     └── Mod 3/
         └── romfs
 ```
-```
-restbl-cli.exe --action merge-mods --mod-path "C:\Users\username\AppData\Roaming\Ryujinx\mods\contents\0100f2c0115b6000" --use-checksums --compress
-```
+> restbl-cli.exe --action merge-mods --mod-path "C:\Users\username\AppData\Roaming\Ryujinx\mods\contents\0100f2c0115b6000" --use-checksums --compress
 
 ### merge-restbl
 This option will create a merged RESTBL file from the two provided RESTBL files. Similar to the previous option, using `--compress` will compress the generated RESTBL file with Zstd compression.
-```
-restbl-cli.exe --action merge-restbl --restbl-path0 "C:\path\to\file1\ResourceSizeTable.Product.120.rsizetable.zs" --restbl-path1 "C:\path\to\file2\ResourceSizeTable.Product.120.rsizetable.zs"
-```
+
+> restbl-cli.exe --action merge-restbl --restbl-path0 "C:\path\to\file1\ResourceSizeTable.Product.120.rsizetable.zs" --restbl-path1 "C:\path\to\file2\ResourceSizeTable.Product.120.rsizetable.zs"
+
 
 ### generate-changelog
 This option will generate a changelog in the format of your choice from the selected RESTBL file.
 
+> restbl-cli.exe --action generate-changelog --changelog-restbl-path "C:\path\to\file\ResourceSizeTable.Product.112.rsizetable.zs" --format rcl
+
 
 ### apply-patches
 This option will apply all RCL/YAML patches in a folder to the selected RESTBL file.
+
+> restbl-cli.exe --action apply-patches --patch-restbl "C:\path\to\file\ResourceSizeTable.Product.121.rsizetable.zs" --patches-path "C:\path\to\folder\containing\json_rcl_yaml_patches" --compress
+
 
 ## Help
 ```
