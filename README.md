@@ -69,12 +69,12 @@ merge-mods:
   --use-checksums               (Optional) Use checksums
 
 merge-restbl:
-  --restbl-path0 RESTBL_PATH0   (Mandatory) Path to the first RESTBL file to merge
-  --restbl-path1 RESTBL_PATH1   (Mandatory) Path to the second RESTBL file to merge
+  --restbl-path0 PATH           (Mandatory) Path to the first RESTBL file to merge
+  --restbl-path1 PATH           (Mandatory) Path to the second RESTBL file to merge
 
 generate-changelog:
-  --changelog-restbl-path CHANGELOG_RESTBL_PATH   (Mandatory) Path to the RESTBL file for generating changelog
-  --format {json,rcl,yaml}                        (Mandatory) Format of the changelog
+  --changelog-restbl-path PATH   (Mandatory) Path to the RESTBL file for generating changelog
+  --format {json,rcl,yaml}       (Mandatory) Format of the changelog
 
 apply-patches:
   --patch-restbl PATCH_RESTBL    (Mandatory) Path to the RESTBL file
