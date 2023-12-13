@@ -5,12 +5,14 @@ try:
     import yaml
 except ImportError:
     raise ImportError("Would you be so kind as to LEARN TO FUCKING READ INSTRUCTIONS")
+from concurrent.futures import ProcessPoolExecutor
+from collections import defaultdict
+from functools import lru_cache
 import sarc
 import os
 import binascii
 import json
 import sys
-from hashlib import sha256
 
 # For pyinstaller relative paths
 def get_correct_path(relative_path):
@@ -133,15 +135,18 @@ class Restbl:
         return self.hashmap
 
     # Returns all modified entries
-    def _DictCompareChanges(self, edited, original):
+    @staticmethod
+    def _DictCompareChanges(edited, original):
         return {k: edited[k] for k in edited if k in original and edited[k] != original[k]}
     
     # Returns all entries not present in the modified version
-    def _DictCompareDeletions(self, edited, original):
+    @staticmethod
+    def _DictCompareDeletions(edited, original):
         return {k: original[k] for k in original if k not in edited}
     
     # Returns all entries only present in the modified version
-    def _DictCompareAdditions(self, edited, original):
+    @staticmethod
+    def _DictCompareAdditions(edited, original):
         return {k: edited[k] for k in edited if k not in original}
 
     # Merges the changes to the hash table and collision table into one dictionary
@@ -157,7 +162,8 @@ class Restbl:
         return changes
 
     # Attempts to get the filepath from the hash and returns the hash if not found
-    def _TryGetPath(self, hash, hashmap):
+    @staticmethod
+    def _TryGetPath(hash, hashmap):
         if hash in hashmap:
             return hashmap[hash]
         else:
@@ -250,45 +256,22 @@ class Restbl:
             else:
                 changelog["Additions"][change] = patch[change]
         return changelog
-    
-    # Requires a single changelog (merge them first with MergeChangelogs)
+
     def ApplyChangelog(self, changelog):
-        # Check if in collision table, then check if it's a hash, then check if the hash exists, otherwise add
-        for change in changelog["Changes"]:
-            if change in self.collision_table:
-                self.collision_table[change] = changelog["Changes"][change]
-            elif change in self.hash_table:
-                self.hash_table[change] = changelog["Changes"][change]
-            elif type(change) == str:
-                if binascii.crc32(change.encode('utf-8')) in self.hash_table:
-                    self.hash_table[binascii.crc32(change.encode('utf-8'))] = changelog["Changes"][change]
-                else:
-                    print(f"{change} was added as it was not an entry in the provided RESTBL")
-                    self.hash_table[binascii.crc32(change.encode('utf-8'))] = changelog["Changes"][change]
-            else:
-                self.hash_table[change] = changelog["Changes"][change]
-        for addition in changelog["Additions"]:
-            if type(addition) == str:
-                hash = binascii.crc32(addition.encode('utf-8'))
-            else:
-                hash = addition
-            # No way to resolve hash collisions for new files if only the hash is known
-            if hash not in self.hash_table or type(addition) == int:
-                self.hash_table[hash] = changelog["Additions"][addition]
-            else:
-                self.collision_table[addition] = changelog["Additions"][addition]
-        for deletion in changelog["Deletions"]:
-            if deletion in self.collision_table:
-                del self.collision_table[deletion]
-            elif deletion in self.hash_table:
-                del self.hash_table[deletion]
-            else:
-                if type(deletion) == str:
-                    if binascii.crc32(deletion.encode('utf-8')) in self.hash_table:
-                        del self.hash_table[binascii.crc32(deletion.encode('utf-8'))]
-                else:
-                    if deletion in self.hash_table:
-                        del self.hash_table[deletion]
+        # Pre-calculate hashes
+        changes = {binascii.crc32(k.encode('utf-8')) if isinstance(k, str) else k: v for k, v in changelog["Changes"].items()}
+        additions = {binascii.crc32(k.encode('utf-8')) if isinstance(k, str) else k: v for k, v in changelog.get("Additions", {}).items()}
+        deletions = {binascii.crc32(k.encode('utf-8')) if isinstance(k, str) else k for k in changelog.get("Deletions", {})}
+
+        # Apply changes and additions
+        self.hash_table = defaultdict(int, {**self.hash_table, **changes, **additions})
+
+        # Remove deletions
+        self.hash_table = {k: v for k, v in self.hash_table.items() if k not in deletions}
+
+        # Print added entries
+        for k in set(changes.keys()).difference(self.hash_table.keys()):
+            print(f"{k} was added as it was not an entry in the provided RESTBL")
     
     def ApplyRcl(self, rcl_path):
         changelog = self.GenerateChangelogFromRcl(rcl_path)
@@ -303,66 +286,52 @@ class Restbl:
         patches = [file for file in os.listdir(patches_folder) if os.path.splitext(file)[1] in ['.rcl', '.yml', '.yaml']]
         changelogs = []
         for patch in patches:
-            if os.path.splitext(patch) in ['.yml', '.yaml']:
+            ext = os.path.splitext(patch)[1]
+            if ext in ['.yml', '.yaml']:
                 changelogs.append(self.GenerateChangelogFromYaml(os.path.join(patches_folder, patch)))
             else:
                 changelogs.append(self.GenerateChangelogFromRcl(os.path.join(patches_folder, patch)))
-        changelog = {"Changes" : {}, "Additions" : {}, "Deletions" : {}}
+
+        changelog = {"Changes" : defaultdict(int), "Additions" : defaultdict(int), "Deletions" : defaultdict(int)}
         for log in changelogs:
-            for change in log["Changes"]:
-                if change not in changelog["Changes"]:
-                    changelog["Changes"][change] = log["Changes"][change]
-                else:
-                    changelog["Changes"][change] = max(changelog["Changes"][change], log["Changes"][change])
-            for addition in log["Additions"]:
-                if addition not in changelog["Additions"]:
-                    changelog["Additions"][addition] = log["Additions"][addition]
-                else:
-                    changelog["Additions"][addition] = max(changelog["Additions"][addition], log["Additions"][addition])
-            for deletion in log["Deletions"]:
-                if deletion not in changelog["Deletions"]:
-                    changelog["Deletions"][deletion] = log["Deletions"][deletion]
+            for change_type in ["Changes", "Additions", "Deletions"]:
+                for key, value in log[change_type].items():
+                    changelog[change_type][key] = max(changelog[change_type][key], value)
+
+        # Convert back to regular dict
+        changelog = {k: dict(v) for k, v in changelog.items()}
+
         return changelog
 
     # Changelog from analyzing mod directory
     def GenerateChangelogFromMod(self, mod_path, checksum=False):
-        if checksum:
-            info = GetInfoWithChecksum(mod_path + '/romfs', self.game_version)
-        else:
-            info = GetInfo(mod_path + '/romfs')
+        info = GetInfoWithChecksum(mod_path + '/romfs', self.game_version) if checksum else GetInfo(mod_path + '/romfs')
         changelog = {"Changes" : {}, "Additions" : {}, "Deletions" : {}}
-        if self.hashmap == {}:
+        if not self.hashmap:
             self._GenerateHashmap()
-        strings = list(self.hashmap.values())
+        strings = set(self.hashmap.values())
         with open(get_correct_path('restbl/ResourceSizeTable.Product.' + self.game_version + '.rsizetable.json'), 'r') as f:
             defaults = json.load(f, object_pairs_hook=lambda d: {int(k) if k.isdigit() else k: v for k, v in d})
-        for file in info:
+        for file, file_info in info.items():
             if os.path.splitext(file)[1] not in ['.bwav', '.rsizetable'] and os.path.splitext(file)[0] != r"Pack\ZsDic":
-                if type(file) == str:
-                    hash = binascii.crc32(file.encode())
-                else:
-                    hash = file
+                hash = binascii.crc32(file.encode()) if isinstance(file, str) else file
                 add = False
                 if checksum:
                     # Only overwrite if the entry is larger than the original entry
                     # This is mostly in case the mod contains multiple copies of a file in a pack of differing sizes
-                    if file in defaults["Collision Table"]:
-                        if info[file] > defaults["Collision Table"][file]:
-                            add = True
-                    elif hash in defaults["Hash Table"]:
-                        if info[file] > defaults["Hash Table"][hash]:
-                            add = True
+                    if file in defaults["Collision Table"] and file_info > defaults["Collision Table"][file]:
+                        add = True
+                    elif hash in defaults["Hash Table"] and file_info > defaults["Hash Table"][hash]:
+                        add = True
                     else:
                         add = True
                 else:
                     add = True
                 if add:
-                    if file in strings:
-                        changelog["Changes"][file] = info[file]
-                    elif file in self.collision_table:
-                        changelog["Changes"][file] = info[file]
+                    if file in strings or file in self.collision_table:
+                        changelog["Changes"][file] = file_info
                     else:
-                        changelog["Additions"][file] = info[file]
+                        changelog["Additions"][file] = file_info
         changelog = dict(sorted(changelog.items()))
         return changelog
     
@@ -391,9 +360,13 @@ class Restbl:
         return MergeChangelogs(changelogs)
     
     # Loads the vanilla RESTBL values into the object
+    @lru_cache(maxsize=None)
+    def _load_json_file(self, filepath):
+        with open(filepath, 'r') as f:
+            return json.load(f, object_pairs_hook=lambda d: {int(k) if k.isdigit() else k: v for k, v in d})
+
     def LoadDefaults(self):
-        with open(get_correct_path('restbl/ResourceSizeTable.Product.' + self.game_version + '.rsizetable.json'), 'r') as f:
-            data = json.load(f, object_pairs_hook=lambda d: {int(k) if k.isdigit() else k: v for k, v in d})
+        data = self._load_json_file(get_correct_path('restbl/ResourceSizeTable.Product.' + self.game_version + '.rsizetable.json'))
         self.hash_table = data["Hash Table"]
         self.collision_table = data["Collision Table"]
 
@@ -457,17 +430,52 @@ def GetInfo(romfs_path):
     info = dict(sorted(info.items()))
     return info
 
+import numpy as np
+import xxhash
+
+def get_app_data_path():
+    if os.name == 'nt':  # Windows
+        return os.environ.get('LOCALAPPDATA')
+    else:  # Linux and macOS
+        return os.path.join(os.path.expanduser('~'), '.local', 'share')
+
+checksums = None
+index_cache = None
+
+def get_checksum(key, key_with_version):
+    global checksums, index_cache
+    if checksums is None:
+        app_data_path = get_app_data_path()
+        checksums_file_path = os.path.join(app_data_path, 'TotK', 'checksums.bin')
+
+        with open(checksums_file_path, "rb") as f:
+            buffer = np.fromfile(f, dtype=np.uint64)
+
+        half = len(buffer) // 2
+        first_half = buffer[:half]
+        second_half = buffer[half:]
+        checksums = dict(zip(first_half, second_half))
+        index_cache = {k: v for v, k in enumerate(first_half)}
+
+    if key_with_version in index_cache:
+        return checksums[key_with_version]
+    elif key in index_cache:
+        return checksums[key]
+    
+    # If no matching key is found, return 0
+    return np.uint64(0)  # Equivalent to ulong.MinValue in C#
+
 # Same as GetInfo but does a checksum comparison first to see if the file has been modified
 def GetInfoWithChecksum(romfs_path, version=121):
     info = {}
     zs = zstd.Zstd()
-    with open(get_correct_path('checksums/TearsOfTheKingdom' + str(version).replace('.', '') + '.json'), 'r') as f:
-        checksums = json.load(f)
     for dir,subdir,files in os.walk(romfs_path):
         for file in files:
             full_path = os.path.join(dir, file)
             filepath = full_path
-            checksum = CalcFileChecksum(full_path)
+            with open(full_path, 'rb') as f:
+                data = f.read()
+            checksum = CalcFileChecksum(data, hash_func=xxhash.xxh64_intdigest)
             if os.path.isfile(filepath):
                 filepath = os.path.join(os.path.relpath(dir, romfs_path), os.path.basename(filepath))
                 if os.path.splitext(filepath)[1] in ['.zs', '.zstd', '.mc']:
@@ -475,10 +483,10 @@ def GetInfoWithChecksum(romfs_path, version=121):
                 if os.path.splitext(filepath)[1] not in ['.bwav', '.rsizetable', '.rcl'] and os.path.splitext(filepath)[0] != r"Pack\ZsDic":
                     filepath = filepath.replace('\\', '/')
                     add = False
-                    if filepath in checksums:
-                        if checksum != checksums[filepath]:
-                            add = True
-                    else:
+                    key = xxhash.xxh64_intdigest((filepath).encode(encoding='UTF-16-LE', errors='strict'))
+                    key_with_version = xxhash.xxh64_intdigest((filepath + '#' + str(version)).encode(encoding='UTF-16-LE', errors='strict'))
+                    stored_checksum = get_checksum(key, key_with_version)
+                    if checksum != stored_checksum:
                         add = True
                     if add:
                         info[filepath] = CalcSize(full_path)
@@ -487,21 +495,31 @@ def GetInfoWithChecksum(romfs_path, version=121):
                             archive = sarc.Sarc(zs.Decompress(full_path, no_output=True))
                             archive_info = archive.files
                             for f in archive_info:
-                                cs = sha256(f["Data"]).hexdigest()
+                                full_path = full_path.replace("\\", "/")
+                                # Remove everything before "romfs/"
+                                start_index = full_path.find("romfs/")
+                                if start_index != -1:
+                                    full_path = full_path[start_index + len("romfs/"):]
+                                cs = CalcFileChecksum(f["Data"], hash_func=xxhash.xxh64_intdigest)
                                 add = False
-                                if f["Name"] in checksums:
-                                    if cs != checksums[f["Name"]]:
-                                        add = True
-                                else:
+                                key = xxhash.xxh64_intdigest((full_path + "/" + f["Name"]).encode(encoding='UTF-16-LE', errors='strict'))
+                                key_with_version = xxhash.xxh64_intdigest((full_path + "/" + f["Name"] + '#' + version).encode(encoding='UTF-16-LE', errors='strict'))
+                                stored_checksum = get_checksum(key, key_with_version)
+                                if cs != stored_checksum:
                                     add = True
                                 if add:
                                     size = CalcSize(f["Name"], len(f["Data"]))
+                                    print (f["Name"])
                                     if f["Name"] not in info:
                                         info[f["Name"]] = size
                                     else:
                                         info[f["Name"]] = max(info[f["Name"]], size)
     info = dict(sorted(info.items()))
     return info
+
+# Returns a xxHash64 hash of file
+def CalcFileChecksum(data, hash_func=xxhash.xxh64):
+    return hash_func(data)
 
 # Same as above but for multiple mods
 def GetInfoList(mod_path):
@@ -510,12 +528,6 @@ def GetInfoList(mod_path):
     for mod in mods:
         files[mod] = GetInfo(os.path.join(mod_path, mod) + "/romfs")
     return files
-
-# Returns a SHA-256 hash of file
-def CalcFileChecksum(filepath):
-    with open(filepath, 'rb') as f:
-        data = f.read()
-    return sha256(data).hexdigest()
 
 # These are estimates, would be nice to have more precise values
 def CalcSize(file, size=None):
