@@ -71,7 +71,7 @@ import zstd
 class Restbl:
     def __init__(self, filepath): # Accepts both compressed and decompressed files
         if os.path.splitext(filepath)[1] in ['.zs', '.zstd']:
-            decompressor = zs.ZstdDecompressor(zs_dic_path)
+            decompressor = zs.ZstdDecompressor()
             with open(filepath, 'rb') as f:
                 compressed = f.read()
                 data = decompressor.decompress(compressed)
