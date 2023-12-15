@@ -5,9 +5,10 @@ try:
     import yaml
 except ImportError:
     raise ImportError("Would you be so kind as to LEARN TO FUCKING READ INSTRUCTIONS")
-from concurrent.futures import ProcessPoolExecutor
 from collections import defaultdict
 from functools import lru_cache
+import numpy as np
+import xxhash
 import sarc
 import os
 import binascii
@@ -430,9 +431,6 @@ def GetInfo(romfs_path):
     info = dict(sorted(info.items()))
     return info
 
-import numpy as np
-import xxhash
-
 def get_app_data_path():
     if os.name == 'nt':  # Windows
         return os.environ.get('LOCALAPPDATA')
@@ -442,7 +440,7 @@ def get_app_data_path():
 checksums = None
 index_cache = None
 
-def get_checksum(key, key_with_version):
+def get_checksum(path, filechecksum):
     global checksums, index_cache
     if checksums is None:
         app_data_path = get_app_data_path()
@@ -457,13 +455,14 @@ def get_checksum(key, key_with_version):
         checksums = dict(zip(first_half, second_half))
         index_cache = {k: v for v, k in enumerate(first_half)}
 
-    if key_with_version in index_cache:
-        return checksums[key_with_version]
-    elif key in index_cache:
-        return checksums[key]
-    
+    versions = ["121", "120", "112", "111", "110", ""]
+    for version in versions:
+        key = xxhash.xxh64_intdigest((path + ('#' + version if version else '')).encode(encoding='UTF-16-LE', errors='strict'))
+        if key in index_cache and checksums[key] == filechecksum:
+            return np.uint64(1)
+
     # If no matching key is found, return 0
-    return np.uint64(0)  # Equivalent to ulong.MinValue in C#
+    return np.uint64(0)
 
 # Same as GetInfo but does a checksum comparison first to see if the file has been modified
 def GetInfoWithChecksum(romfs_path, version=121):
@@ -483,10 +482,8 @@ def GetInfoWithChecksum(romfs_path, version=121):
                 if os.path.splitext(filepath)[1] not in ['.bwav', '.rsizetable', '.rcl'] and os.path.splitext(filepath)[0] != r"Pack\ZsDic":
                     filepath = filepath.replace('\\', '/')
                     add = False
-                    key = xxhash.xxh64_intdigest((filepath).encode(encoding='UTF-16-LE', errors='strict'))
-                    key_with_version = xxhash.xxh64_intdigest((filepath + '#' + str(version)).encode(encoding='UTF-16-LE', errors='strict'))
-                    stored_checksum = get_checksum(key, key_with_version)
-                    if checksum != stored_checksum:
+                    stored_checksum = get_checksum(filepath, checksum)
+                    if stored_checksum == 0:
                         add = True
                     if add:
                         info[filepath] = CalcSize(full_path)
@@ -496,16 +493,12 @@ def GetInfoWithChecksum(romfs_path, version=121):
                             archive_info = archive.files
                             for f in archive_info:
                                 full_path = full_path.replace("\\", "/")
-                                # Remove everything before "romfs/"
-                                start_index = full_path.find("romfs/")
-                                if start_index != -1:
-                                    full_path = full_path[start_index + len("romfs/"):]
-                                cs = CalcFileChecksum(f["Data"], hash_func=xxhash.xxh64_intdigest)
+                                full_path = full_path.split("romfs/", 1)[-1]
+                                cs = xxhash.xxh64_intdigest(f["Data"])
                                 add = False
-                                key = xxhash.xxh64_intdigest((full_path + "/" + f["Name"]).encode(encoding='UTF-16-LE', errors='strict'))
-                                key_with_version = xxhash.xxh64_intdigest((full_path + "/" + f["Name"] + '#' + version).encode(encoding='UTF-16-LE', errors='strict'))
-                                stored_checksum = get_checksum(key, key_with_version)
-                                if cs != stored_checksum:
+                                path_for_checksum = (full_path + "/" + f["Name"])
+                                stored_checksum = get_checksum(path_for_checksum, cs)
+                                if stored_checksum == 0:
                                     add = True
                                 if add:
                                     size = CalcSize(f["Name"], len(f["Data"]))
