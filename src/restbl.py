@@ -13,6 +13,7 @@ import os
 import binascii
 import json
 import sys
+import argparse
 
 # For pyinstaller relative paths
 def get_correct_path(relative_path):
@@ -349,8 +350,8 @@ class Restbl:
         return changelog
 
     # Changelog from analyzing mod directory
-    def GenerateChangelogFromMod(self, mod_path, checksum=False):
-        info = GetInfoWithChecksum(mod_path + '/romfs', self.game_version) if checksum else GetInfo(mod_path + '/romfs')
+    def GenerateChangelogFromMod(self, mod_path, checksum=False, verbose=False):
+        info = GetInfoWithChecksum(mod_path + '/romfs', self.game_version, verbose) if checksum else GetInfo(mod_path + '/romfs')
         changelog = {"Changes" : {}, "Additions" : {}, "Deletions" : {}}
         if not self.hashmap:
             self._GenerateHashmap()
@@ -381,7 +382,7 @@ class Restbl:
         return changelog
     
     # Same as above but for multiple mods
-    def GenerateChangelogFromModDirectory(self, mod_path, delete=False, smart_analysis=True, checksum=False):
+    def GenerateChangelogFromModDirectory(self, mod_path, delete=False, smart_analysis=True, checksum=False, verbose=False):
         changelogs = []
         mods = [mod for mod in os.listdir(mod_path) if os.path.isdir(os.path.join(mod_path, mod))]
         for mod in mods:
@@ -393,9 +394,9 @@ class Restbl:
                     changelogs.append(restbl.GenerateChangelog())
                 else:
                     print(f"Did not find RESTBL in {mod}")
-                    changelogs.append(self.GenerateChangelogFromMod(os.path.join(mod_path, mod), checksum))
+                    changelogs.append(self.GenerateChangelogFromMod(os.path.join(mod_path, mod), checksum, verbose))
             else:
-                changelogs.append(self.GenerateChangelogFromMod(os.path.join(mod_path, mod), checksum))
+                changelogs.append(self.GenerateChangelogFromMod(os.path.join(mod_path, mod), checksum, verbose))
             if delete:
                 try:
                     os.remove(restbl_path)
@@ -503,7 +504,7 @@ def get_checksum(path, filechecksum):
     return np.uint64(0)
 
 # Same as GetInfo but does a checksum comparison first to see if the file has been modified
-def GetInfoWithChecksum(romfs_path, version=121):
+def GetInfoWithChecksum(romfs_path, version=121, verbose=False):
     info = {}
     zs = zstd.Zstd()
     for dir,subdir,files in os.walk(romfs_path):
@@ -525,6 +526,8 @@ def GetInfoWithChecksum(romfs_path, version=121):
                         add = True
                     if add:
                         info[filepath] = CalcSize(full_path)
+                        if verbose:  # Only print if verbose is True
+                            print(filepath)
                         #print(filepath)
                         if os.path.splitext(filepath)[1] == '.pack':
                             archive = sarc.Sarc(zs.Decompress(full_path, no_output=True))
@@ -540,7 +543,8 @@ def GetInfoWithChecksum(romfs_path, version=121):
                                     add = True
                                 if add:
                                     size = CalcSize(f["Name"], len(f["Data"]))
-                                    #print (f["Name"])
+                                    if verbose:
+                                        print (f["Name"])
                                     if f["Name"] not in info:
                                         info[f["Name"]] = size
                                     else:
@@ -595,7 +599,7 @@ def MergeChangelogs(changelogs):
     return changelog
 
 # Analyzes a directory of mods, generates a combined changelog, and generates a RESTBL from it
-def MergeMods(mod_path, restbl_path='', version=121, compressed=True, delete=False, smart_analysis=True, checksum=False):
+def MergeMods(mod_path, restbl_path='', version=121, compressed=True, delete=False, smart_analysis=True, checksum=False, verbose=False):
     if not(os.path.exists(restbl_path)):
         print("Creating empty resource size table...")
         filename = os.path.join(restbl_path, 'ResourceSizeTable.Product.' + str(version).replace('.', '') + '.rsizetable')
@@ -611,7 +615,7 @@ def MergeMods(mod_path, restbl_path='', version=121, compressed=True, delete=Fal
     else:
         restbl = Restbl(restbl_path)
     print("Generating changelogs...")
-    changelog = restbl.GenerateChangelogFromModDirectory(mod_path, delete, smart_analysis, checksum)
+    changelog = restbl.GenerateChangelogFromModDirectory(mod_path, delete, smart_analysis, checksum, verbose)
     with open('test.json', 'w') as f:
         json.dump(changelog, f, indent=4)
     print("Applying changes...")
@@ -694,36 +698,35 @@ def apply_patches(patch_restbl, patches_path, compressed=True):
             file.write(compressor.compress(data))
     print("Finished")
 
-import argparse
-
 def open_tool():
     parser = argparse.ArgumentParser(description='RESTBL Tool', formatter_class=argparse.RawTextHelpFormatter)
-    parser.add_argument('--action', choices=['merge-mods', 'merge-restbl', 'generate-changelog', 'apply-patches'], required=True, help='Action to perform')
-    parser.add_argument('--compress', action='store_true', help='Compress the output')
+    parser.add_argument('-a', '--action', choices=['merge-mods', 'merge-restbl', 'generate-changelog', 'apply-patches'], required=True, help='Action to perform')
+    parser.add_argument('-c', '--compress', action='store_true', help='Compress the output')
+    parser.add_argument('-v', '--verbose', action='store_true', help='Print the list of edited files from mods')
 
     # Arguments for 'merge-mods' action
     merge_mods_group = parser.add_argument_group('merge-mods')
-    merge_mods_group.add_argument('--mod-path', type=str, help='(Mandatory) Path to the mod directory')
-    merge_mods_group.add_argument('--version', type=int, default=121, help='(Optional) TotK version - default: 121')
-    merge_mods_group.add_argument('--use-existing-restbl', action='store_true', help='(Optional) Use existing RESTBL')
-    merge_mods_group.add_argument('--restbl-path', type=str, help='(Optional) Path to the RESTBL file to use')
-    merge_mods_group.add_argument('--delete-existing-restbl', action='store_true', help='(Optional) Delete existing RESTBL')
-    merge_mods_group.add_argument('--use-checksums', action='store_true', help='(Optional) Use checksums')
+    merge_mods_group.add_argument('-m', '--mod-path', type=str, help='(Mandatory) Path to the mod directory')
+    merge_mods_group.add_argument('-ver', '--version', type=int, default=121, help='(Optional) TotK version - default: 121')
+    merge_mods_group.add_argument('-u', '--use-existing-restbl', action='store_true', help='(Optional) Use existing RESTBL')
+    merge_mods_group.add_argument('-r', '--restbl-path', type=str, help='(Optional) Path to the RESTBL file to use')
+    merge_mods_group.add_argument('-del', '--delete-existing-restbl', action='store_true', help='(Optional) Delete existing RESTBL')
+    merge_mods_group.add_argument('-cs', '--use-checksums', action='store_true', help='[Recommended] Use checksums')
 
     # Arguments for 'merge-restbl' action
     merge_restbl_group = parser.add_argument_group('merge-restbl')
-    merge_restbl_group.add_argument('--restbl-path0', type=str, help='(Mandatory) Path to the first RESTBL file to merge')
-    merge_restbl_group.add_argument('--restbl-path1', type=str, help='(Mandatory) Path to the second RESTBL file to merge')
+    merge_restbl_group.add_argument('-r0', '--restbl-path0', type=str, help='(Mandatory) Path to the first RESTBL file to merge')
+    merge_restbl_group.add_argument('-r1', '--restbl-path1', type=str, help='(Mandatory) Path to the second RESTBL file to merge')
 
     # Arguments for 'generate-changelog' action
     gen_changelog_group = parser.add_argument_group('generate-changelog')
-    gen_changelog_group.add_argument('--changelog-restbl-path', type=str, help='(Mandatory) Path to the RESTBL file for generating changelog')
-    gen_changelog_group.add_argument('--format', choices=['json', 'rcl', 'yaml'], help='(Mandatory) Format of the changelog')
+    gen_changelog_group.add_argument('-l', '--log-restbl-path', type=str, help='(Mandatory) Path to the RESTBL file for generating changelog')
+    gen_changelog_group.add_argument('-f', '--format', choices=['json', 'rcl', 'yaml'], help='(Mandatory) Format of the changelog')
 
     # Arguments for 'apply-patches' action
     apply_patches_group = parser.add_argument_group('apply-patches')
-    apply_patches_group.add_argument('--patch-restbl', type=str, help='(Mandatory) Path to the RESTBL file to patch')
-    apply_patches_group.add_argument('--patches-path', type=str, help='(Mandatory) Path to the folder containing patches (rcl, yaml, json)')
+    apply_patches_group.add_argument('-p', '--patch-restbl', type=str, help='(Mandatory) Path to the RESTBL file to patch')
+    apply_patches_group.add_argument('-pp', '--patches-path', type=str, help='(Mandatory) Path to the folder containing patches (rcl, yaml, json)')
 
     args = parser.parse_args()
 
@@ -734,10 +737,10 @@ def open_tool():
             restbl_path = args.restbl_path
         import time
         start_time = time.time()
-        MergeMods(args.mod_path, restbl_path, args.version, args.compress, args.delete_existing_restbl, args.use_existing_restbl, args.use_checksums)
+        MergeMods(args.mod_path, restbl_path, args.version, args.compress, args.delete_existing_restbl, args.use_existing_restbl, args.use_checksums, args.verbose)
         end_time = time.time()
         execution_time = end_time - start_time
-        print(f"The script executed in {execution_time} seconds")
+        print(f"All calculations were executed in {execution_time} seconds")
     elif args.action == 'merge-restbl':
         # Replace the file browsing dialog with command line arguments
         restbl_path0 = args.restbl_path0
