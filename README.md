@@ -31,24 +31,32 @@ When using `merge-mods`, the argument `--mod-path C:\Path\to\mods` is required. 
     └── Mod 3/
         └── romfs
 ```
-> restbl-cli.exe --action merge-mods --mod-path "C:\Users\username\AppData\Roaming\Ryujinx\mods\contents\0100f2c0115b6000" --use-checksums --compress
+> restbl-cli.exe --action merge-mods --use-checksums --compress --mod-path "C:\Users\username\AppData\Roaming\Ryujinx\mods\contents\0100f2c0115b6000"
 
-### merge-restbl
+> restbl-cli.exe -a merge-mods  -cs -c -m "C:\Users\username\AppData\Roaming\Ryujinx\mods\contents\0100f2c0115b6000"
+
+### - merge-restbl
 This option will create a merged RESTBL file from the two provided RESTBL files. Similar to the previous option, using `--compress` will compress the generated RESTBL file with Zstd compression.
 
-> restbl-cli.exe --action merge-restbl --restbl-path0 "C:\path\to\file1\ResourceSizeTable.Product.120.rsizetable.zs" --restbl-path1 "C:\path\to\file2\ResourceSizeTable.Product.120.rsizetable.zs" --compress
+> restbl-cli.exe --action merge-restbl  --compress --restbl-path0 "C:\path\to\file1\ResourceSizeTable.Product.120.rsizetable.zs" --restbl-path1 "C:\path\to\file2\ResourceSizeTable.Product.120.rsizetable.zs"
+
+> restbl-cli.exe -a merge-restbl  -c -r0 "C:\path\to\file1\ResourceSizeTable.Product.120.rsizetable.zs" -r1 "C:\path\to\file2\ResourceSizeTable.Product.120.rsizetable.zs"
 
 
-### generate-changelog
+### - generate-changelog
 This option will generate a changelog in the format of your choice from the selected RESTBL file.
 
-> restbl-cli.exe --action generate-changelog --changelog-restbl-path "C:\path\to\file\ResourceSizeTable.Product.112.rsizetable.zs" --format rcl
+> restbl-cli.exe --action generate-changelog --log-restbl-path "C:\path\to\file\ResourceSizeTable.Product.112.rsizetable.zs" --format rcl
+
+> restbl-cli.exe -a generate-changelog -l "C:\path\to\file\ResourceSizeTable.Product.112.rsizetable.zs" -f rcl
 
 
-### apply-patches
+### - apply-patches
 This option will apply all RCL/YAML patches in a folder to the selected RESTBL file.
 
-> restbl-cli.exe --action apply-patches --patch-restbl "C:\path\to\file\ResourceSizeTable.Product.121.rsizetable.zs" --patches-path "C:\path\to\folder\containing\json_rcl_yaml_patches" --compress
+> restbl-cli.exe --action apply-patches  --compress --patch-restbl "C:\path\to\file\ResourceSizeTable.Product.121.rsizetable.zs" --patches-path "C:\path\to\folder\containing\json_rcl_yaml_patches"
+
+> restbl-cli.exe -a apply-patches  -c -p "C:\path\to\file\ResourceSizeTable.Product.121.rsizetable.zs" -pp "C:\path\to\folder\containing\json_rcl_yaml_patches"
 
 
 ## Help
@@ -57,26 +65,40 @@ RESTBL Tool
 
 options:
   -h, --help            show this help message and exit
+  -a {merge-mods,merge-restbl,generate-changelog,apply-patches},
   --action {merge-mods,merge-restbl,generate-changelog,apply-patches}
-  --compress            Compress the output
+                        Action to perform
+  -c, --compress        Compress the output
+  -v, --verbose         Print the list of edited files from mods
 
 merge-mods:
-  --mod-path MOD_PATH           (Mandatory) Path to the mod directory
-  --version VERSION             (Optional) TotK version - default: 121
-  --use-existing-restbl         (Optional) Use existing RESTBL
-  --restbl-path RESTBL_PATH     (Optional) Path to the RESTBL file
-  --delete-existing-restbl      (Optional) Delete existing RESTBL
-  --use-checksums               (Optional) Use checksums
+  -m MOD_PATH, --mod-path MOD_PATH
+                        (Mandatory) Path to the mod directory
+  -ver VERSION, --version VERSION
+                        (Optional) TotK version - default: 121
+  -u, --use-existing-restbl
+                        (Optional) Use existing RESTBL
+  -r RESTBL_PATH, --restbl-path RESTBL_PATH
+                        (Optional) Path to the RESTBL file to use
+  -del, --delete-existing-restbl
+                        (Optional) Delete existing RESTBL
+  -cs, --use-checksums  [Recommended] Use checksums
 
 merge-restbl:
-  --restbl-path0 PATH           (Mandatory) Path to the first RESTBL file to merge
-  --restbl-path1 PATH           (Mandatory) Path to the second RESTBL file to merge
+  -r0 RESTBL_PATH0, --restbl-path0 RESTBL_PATH0
+                        (Mandatory) Path to the first RESTBL file to merge
+  -r1 RESTBL_PATH1, --restbl-path1 RESTBL_PATH1
+                        (Mandatory) Path to the second RESTBL file to merge
 
 generate-changelog:
-  --changelog-restbl-path PATH   (Mandatory) Path to the RESTBL file for generating changelog
-  --format {json,rcl,yaml}       (Mandatory) Format of the changelog
+  -l LOG_RESTBL_PATH, --log-restbl-path LOG_RESTBL_PATH
+                        (Mandatory) Path to the RESTBL file for generating changelog
+  -f {json,rcl,yaml}, --format {json,rcl,yaml}
+                        (Mandatory) Format of the changelog
 
 apply-patches:
-  --patch-restbl PATCH_RESTBL    (Mandatory) Path to the RESTBL file
-  --patches-path PATCHES_PATH    (Mandatory) Path to the folder containing patches (rcl, yaml, json)
+  -p PATCH_RESTBL, --patch-restbl PATCH_RESTBL
+                        (Mandatory) Path to the RESTBL file to patch
+  -pp PATCHES_PATH, --patches-path PATCHES_PATH
+                        (Mandatory) Path to the folder containing patches (rcl, yaml, json)
 ```
