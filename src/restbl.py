@@ -1,5 +1,4 @@
 from utils import *
-import zstd
 try:
     import zstandard as zs
     import yaml
@@ -24,10 +23,55 @@ def get_correct_path(relative_path):
 
     return os.path.join(base_path, relative_path)
 
+def get_app_data_path():
+    if os.name == 'nt':  # Windows
+        return os.environ.get('LOCALAPPDATA')
+    else:  # Linux and macOS
+        return os.path.join(os.path.expanduser('~'), '.local', 'share')
+
+app_data_path = get_app_data_path()
+config_path = os.path.join(app_data_path, 'TotK')
+config_json_path = os.path.join(config_path, 'config.json')
+checksum_bin = os.path.join(config_path, 'checksums.bin')
+os.makedirs(config_path, exist_ok=True)
+
+def check_config():
+    # Check if config.json exists
+    if not os.path.exists(config_json_path):
+        # Prompt the user for the RomFS Dump Path
+        game_path = input("Please enter the RomFS Dump Path: ")
+
+        # Create the config.json file
+        with open(config_json_path, 'w') as f:
+            json.dump({"GamePath": game_path}, f)
+    else:
+        # Load the config.json file
+        with open(config_json_path, 'r') as f:
+            config = json.load(f)
+
+        # Check for the existence of Pack\ZsDic.pack.zs
+        game_path = config["GamePath"]
+        zs_dic_path = os.path.join(game_path, 'Pack', 'ZsDic.pack.zs')
+        if not os.path.exists(zs_dic_path):
+            print("Invalid game dump, missing ZsDic.pack.zs")
+            sys.exit()
+
+    # If checksums.bin doesn't exist, download it
+    if not os.path.exists(checksum_bin):
+        import requests
+        url = "https://github.com/MasterBubbles/restbl-cli/raw/master/checksums.bin"
+        print("Checksums are missing, downloading them from: " + url)
+        response = requests.get(url)
+        with open(checksum_bin, 'wb') as f:
+            f.write(response.content)
+
+check_config()
+import zstd
+
 class Restbl:
     def __init__(self, filepath): # Accepts both compressed and decompressed files
         if os.path.splitext(filepath)[1] in ['.zs', '.zstd']:
-            decompressor = zs.ZstdDecompressor()
+            decompressor = zs.ZstdDecompressor(zs_dic_path)
             with open(filepath, 'rb') as f:
                 compressed = f.read()
                 data = decompressor.decompress(compressed)
@@ -431,12 +475,6 @@ def GetInfo(romfs_path):
     info = dict(sorted(info.items()))
     return info
 
-def get_app_data_path():
-    if os.name == 'nt':  # Windows
-        return os.environ.get('LOCALAPPDATA')
-    else:  # Linux and macOS
-        return os.path.join(os.path.expanduser('~'), '.local', 'share')
-
 checksums = None
 index_cache = None
 
@@ -474,7 +512,7 @@ def GetInfoWithChecksum(romfs_path, version=121):
             filepath = full_path
             with open(full_path, 'rb') as f:
                 data = f.read()
-            checksum = CalcFileChecksum(data, hash_func=xxhash.xxh64_intdigest)
+            checksum = xxhash.xxh64_intdigest(data)
             if os.path.isfile(filepath):
                 filepath = os.path.join(os.path.relpath(dir, romfs_path), os.path.basename(filepath))
                 if os.path.splitext(filepath)[1] in ['.zs', '.zstd', '.mc']:
@@ -487,7 +525,7 @@ def GetInfoWithChecksum(romfs_path, version=121):
                         add = True
                     if add:
                         info[filepath] = CalcSize(full_path)
-                        print(filepath)
+                        #print(filepath)
                         if os.path.splitext(filepath)[1] == '.pack':
                             archive = sarc.Sarc(zs.Decompress(full_path, no_output=True))
                             archive_info = archive.files
@@ -502,17 +540,13 @@ def GetInfoWithChecksum(romfs_path, version=121):
                                     add = True
                                 if add:
                                     size = CalcSize(f["Name"], len(f["Data"]))
-                                    print (f["Name"])
+                                    #print (f["Name"])
                                     if f["Name"] not in info:
                                         info[f["Name"]] = size
                                     else:
                                         info[f["Name"]] = max(info[f["Name"]], size)
     info = dict(sorted(info.items()))
     return info
-
-# Returns a xxHash64 hash of file
-def CalcFileChecksum(data, hash_func=xxhash.xxh64):
-    return hash_func(data)
 
 # Same as above but for multiple mods
 def GetInfoList(mod_path):
@@ -526,9 +560,9 @@ def GetInfoList(mod_path):
 def CalcSize(file, size=None):
     if size == None:
         size = os.path.getsize(file)
-    decompressor = zstd.Zstd()
+    zs = zstd.Zstd()
     if os.path.splitext(file)[1] in ['.zs', '.zstd']:
-        size = decompressor.GetDecompressedSize(file)
+        size = zs.GetDecompressedSize(file)
         file = os.path.splitext(file)[0]
     elif os.path.splitext(file)[1] in ['.mc']:
         size = os.path.getsize(file) * 5 # MC decompressor wasn't working so this is an estimate of the decompressed size
@@ -698,7 +732,12 @@ def open_tool():
             restbl_path = ''  # Set restbl_path to an empty string if it's not provided
         else:
             restbl_path = args.restbl_path
+        import time
+        start_time = time.time()
         MergeMods(args.mod_path, restbl_path, args.version, args.compress, args.delete_existing_restbl, args.use_existing_restbl, args.use_checksums)
+        end_time = time.time()
+        execution_time = end_time - start_time
+        print(f"The script executed in {execution_time} seconds")
     elif args.action == 'merge-restbl':
         # Replace the file browsing dialog with command line arguments
         restbl_path0 = args.restbl_path0
