@@ -40,7 +40,7 @@ def check_config():
     # Check if config.json exists
     if not os.path.exists(config_json_path):
         # Prompt the user for the RomFS Dump Path
-        game_path = input("Please enter the RomFS Dump Path: ")
+        game_path = input("Please enter the path to a RomFS Dump: ")
 
         # Create the config.json file
         with open(config_json_path, 'w') as f:
