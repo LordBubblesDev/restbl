@@ -764,7 +764,7 @@ def open_tool():
                 file.write(compressor.compress(data))
         print("Finished")
     if args.action == 'generate-changelog':
-        gen_changelog(args.changelog_restbl_path, args.format)
+        gen_changelog(args.log_restbl_path, args.format)
     elif args.action == 'apply-patches':
         apply_patches(args.patch_restbl, args.patches_path, compressed=args.compress)
 
