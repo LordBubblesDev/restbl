@@ -1,7 +1,4 @@
-try:
-    import zstandard as zs
-except ImportError:
-    raise ImportError("Would you be so kind as to LEARN TO FUCKING READ INSTRUCTIONS")
+import zstandard as zs
 import sarc
 import os
 import io
@@ -54,7 +51,7 @@ class Zstd:
             if os.path.splitext(os.path.splitext(filepath)[0])[1] == '.pack':
                 dictionary = Zstd.pack_zsdic
             elif os.path.splitext(os.path.splitext(filepath)[0])[1] == '.byml':
-                if os.path.splitext(os.path.splitext(os.path.splitext(filepath)[0])[0])[1] == '.bcett':
+                if filepath.endswith('.bcett.byml.zs'):
                     dictionary = Zstd.bcett_byml_zsdic
                 else:
                     dictionary = Zstd.zs_zsdic
@@ -98,7 +95,7 @@ class Zstd:
                     if os.path.splitext(os.path.splitext(filepath)[0])[1] == '.pack':
                         dictionary = Zstd.pack_zsdic
                     elif os.path.splitext(os.path.splitext(filepath)[0])[1] == '.byml':
-                        if os.path.splitext(os.path.splitext(os.path.splitext(filepath)[0])[0])[1] == '.bcett':
+                        if filepath.endswith('.bcett.byml.zs'):
                             dictionary = Zstd.bcett_byml_zsdic
                         else:
                             dictionary = Zstd.zs_zsdic
@@ -115,10 +112,10 @@ class Zstd:
     # Compresses file to specified location
     def _CompressFile(self, filepath, output_dir='', level=16, with_dict=False):
         if with_dict and os.path.basename(filepath) != 'ZsDic.pack.zs':
-            if os.path.splitext(os.path.splitext(filepath)[0])[1] == '.pack':
+            if filepath.endswith('.pack'):
                 dictionary = Zstd.pack_zsdic
-            elif os.path.splitext(os.path.splitext(filepath)[0])[1] == '.byml':
-                if os.path.splitext(os.path.splitext(os.path.splitext(filepath)[0])[0])[1] == '.bcett':
+            elif filepath.endswith('.byml'):
+                if filepath.endswith('.bcett.byml'):
                     dictionary = Zstd.bcett_byml_zsdic
                 else:
                     dictionary = Zstd.zs_zsdic
