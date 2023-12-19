@@ -1,9 +1,6 @@
 from utils import *
-try:
-    import zstandard as zs
-    import yaml
-except ImportError:
-    raise ImportError("Would you be so kind as to LEARN TO FUCKING READ INSTRUCTIONS")
+import zstandard as zs
+import yaml
 from collections import defaultdict
 from functools import lru_cache
 import numpy as np
@@ -39,8 +36,16 @@ os.makedirs(config_path, exist_ok=True)
 def check_config():
     # Check if config.json exists
     if not os.path.exists(config_json_path):
-        # Prompt the user for the RomFS Dump Path
-        game_path = input("Please enter the path to a RomFS Dump: ")
+        while True:
+            # Prompt the user for the RomFS Dump Path
+            game_path = input("Please enter the path to a RomFS Dump: ")
+
+            # Check for the existence of Pack\ZsDic.pack.zs
+            zs_dic_path = os.path.join(game_path, 'Pack', 'ZsDic.pack.zs')
+            if os.path.exists(zs_dic_path):
+                break  # Exit the loop if the path is valid
+            else:
+                print("Invalid game dump, missing ZsDic.pack.zs. Please try again.")
 
         # Create the config.json file
         with open(config_json_path, 'w') as f:
@@ -562,21 +567,23 @@ def GetInfoList(mod_path):
 
 # These are estimates, would be nice to have more precise values
 def CalcSize(file, size=None):
-    if size == None:
+    if size is None:
         size = os.path.getsize(file)
     zs = zstd.Zstd()
     if os.path.splitext(file)[1] in ['.zs', '.zstd']:
         size = zs.GetDecompressedSize(file)
         file = os.path.splitext(file)[0]
     elif os.path.splitext(file)[1] in ['.mc']:
-        size = os.path.getsize(file) * 5 # MC decompressor wasn't working so this is an estimate of the decompressed size
+        size = (os.path.getsize(file)) * 5 # MC decompressor wasn't working so this is an estimate of the decompressed size
         file = os.path.splitext(file)[0]
     if os.path.splitext(file)[1] == '.txtg':
         return size + 5000
     elif os.path.splitext(file)[1] == '.bgyml':
         return (size + 1000) * 8
+    elif os.path.splitext(file)[1] == '.bars':
+        return round(size * 1.9)
     else:
-        return (size + 1500) * 4
+        return (size + 5000) * 3
 
 # Merges list of changelogs into one (doesn't accept RCL or YAML)
 def MergeChangelogs(changelogs):
@@ -699,74 +706,225 @@ def apply_patches(patch_restbl, patches_path, compressed=True):
     print("Finished")
 
 def open_tool():
-    parser = argparse.ArgumentParser(description='RESTBL Tool', formatter_class=argparse.RawTextHelpFormatter)
-    parser.add_argument('-a', '--action', choices=['merge-mods', 'merge-restbl', 'generate-changelog', 'apply-patches'], required=True, help='Action to perform')
-    parser.add_argument('-c', '--compress', action='store_true', help='Compress the output')
-    parser.add_argument('-v', '--verbose', action='store_true', help='Print the list of edited files from mods')
+    if len(sys.argv) > 1:
+        parser = argparse.ArgumentParser(description='RESTBL Tool', formatter_class=argparse.RawTextHelpFormatter)
+        parser.add_argument('-a', '--action', choices=['merge-mods', 'merge-restbl', 'generate-changelog', 'apply-patches'], required=True, help='Action to perform')
+        parser.add_argument('-c', '--compress', action='store_true', help='Compress the output')
+        parser.add_argument('-v', '--verbose', action='store_true', help='Print the list of edited files from mods')
 
-    # Arguments for 'merge-mods' action
-    merge_mods_group = parser.add_argument_group('merge-mods')
-    merge_mods_group.add_argument('-m', '--mod-path', type=str, help='(Mandatory) Path to the mod directory')
-    merge_mods_group.add_argument('-ver', '--version', type=int, default=121, help='(Optional) TotK version - default: 121')
-    merge_mods_group.add_argument('-u', '--use-existing-restbl', action='store_true', help='(Optional) Use existing RESTBL')
-    merge_mods_group.add_argument('-r', '--restbl-path', type=str, help='(Optional) Path to the RESTBL file to use')
-    merge_mods_group.add_argument('-del', '--delete-existing-restbl', action='store_true', help='(Optional) Delete existing RESTBL')
-    merge_mods_group.add_argument('-cs', '--use-checksums', action='store_true', help='[Recommended] Use checksums')
+        # Arguments for 'merge-mods' action
+        merge_mods_group = parser.add_argument_group('merge-mods')
+        merge_mods_group.add_argument('-m', '--mod-path', type=str, help='(Mandatory) Path to the mod directory')
+        merge_mods_group.add_argument('-ver', '--version', type=int, default=121, help='(Optional) TotK version - default: 121')
+        merge_mods_group.add_argument('-u', '--use-existing-restbl', action='store_true', help='(Optional) Use existing RESTBL')
+        merge_mods_group.add_argument('-r', '--restbl-path', type=str, help='(Optional) Path to the RESTBL file to use')
+        merge_mods_group.add_argument('-d', '--delete-existing-restbl', action='store_true', help='(Optional) Delete existing RESTBL')
+        merge_mods_group.add_argument('-cs', '--use-checksums', action='store_true', help='[Recommended] Use checksums')
 
-    # Arguments for 'merge-restbl' action
-    merge_restbl_group = parser.add_argument_group('merge-restbl')
-    merge_restbl_group.add_argument('-r0', '--restbl-path0', type=str, help='(Mandatory) Path to the first RESTBL file to merge')
-    merge_restbl_group.add_argument('-r1', '--restbl-path1', type=str, help='(Mandatory) Path to the second RESTBL file to merge')
+        # Arguments for 'merge-restbl' action
+        merge_restbl_group = parser.add_argument_group('merge-restbl')
+        merge_restbl_group.add_argument('-r0', '--restbl-path0', type=str, help='(Mandatory) Path to the first RESTBL file to merge')
+        merge_restbl_group.add_argument('-r1', '--restbl-path1', type=str, help='(Mandatory) Path to the second RESTBL file to merge')
 
-    # Arguments for 'generate-changelog' action
-    gen_changelog_group = parser.add_argument_group('generate-changelog')
-    gen_changelog_group.add_argument('-l', '--log-restbl-path', type=str, help='(Mandatory) Path to the RESTBL file for generating changelog')
-    gen_changelog_group.add_argument('-f', '--format', choices=['json', 'rcl', 'yaml'], help='(Mandatory) Format of the changelog')
+        # Arguments for 'generate-changelog' action
+        gen_changelog_group = parser.add_argument_group('generate-changelog')
+        gen_changelog_group.add_argument('-l', '--log-restbl-path', type=str, help='(Mandatory) Path to the RESTBL file for generating changelog')
+        gen_changelog_group.add_argument('-f', '--format', choices=['json', 'rcl', 'yaml'], help='(Mandatory) Format of the changelog')
 
-    # Arguments for 'apply-patches' action
-    apply_patches_group = parser.add_argument_group('apply-patches')
-    apply_patches_group.add_argument('-p', '--patch-restbl', type=str, help='(Mandatory) Path to the RESTBL file to patch')
-    apply_patches_group.add_argument('-pp', '--patches-path', type=str, help='(Mandatory) Path to the folder containing patches (rcl, yaml, json)')
+        # Arguments for 'apply-patches' action
+        apply_patches_group = parser.add_argument_group('apply-patches')
+        apply_patches_group.add_argument('-p', '--patch-restbl', type=str, help='(Mandatory) Path to the RESTBL file to patch')
+        apply_patches_group.add_argument('-pp', '--patches-path', type=str, help='(Mandatory) Path to the folder containing patches (rcl, yaml, json)')
 
-    args = parser.parse_args()
+        args = parser.parse_args()
 
-    if args.action == 'merge-mods':
-        if args.restbl_path is None:
-            restbl_path = ''  # Set restbl_path to an empty string if it's not provided
-        else:
-            restbl_path = args.restbl_path
-        import time
-        start_time = time.time()
-        MergeMods(args.mod_path, restbl_path, args.version, args.compress, args.delete_existing_restbl, args.use_existing_restbl, args.use_checksums, args.verbose)
-        end_time = time.time()
-        execution_time = end_time - start_time
-        print(f"All calculations were executed in {execution_time} seconds")
-    elif args.action == 'merge-restbl':
-        # Replace the file browsing dialog with command line arguments
-        restbl_path0 = args.restbl_path0
-        restbl_path1 = args.restbl_path1
-        restbl0 = Restbl(restbl_path0)
-        restbl1 = Restbl(restbl_path1)
-        changelog0, changelog1, restbl = restbl0.GenerateChangelog(), restbl1.GenerateChangelog(), restbl0
-        print("Calculating merged changelog...")
-        changelog = MergeChangelogs([changelog0, changelog1])
-        print("Applying changes...")
-        restbl.ApplyChangelog(changelog)
-        restbl.Reserialize()
-        if args.compress:
-            with open(restbl.filename, 'rb') as file:
-                data = file.read()
-            if os.path.exists(restbl.filename + '.zs'):
-                os.remove(restbl.filename + '.zs')
-            os.rename(restbl.filename, restbl.filename + '.zs')
-            with open(restbl.filename + '.zs', 'wb') as file:
-                compressor = zs.ZstdCompressor()
-                file.write(compressor.compress(data))
-        print("Finished")
-    if args.action == 'generate-changelog':
-        gen_changelog(args.log_restbl_path, args.format)
-    elif args.action == 'apply-patches':
-        apply_patches(args.patch_restbl, args.patches_path, compressed=args.compress)
+        if args.action == 'merge-mods':
+            if args.restbl_path is None:
+                restbl_path = ''  # Set restbl_path to an empty string if it's not provided
+            else:
+                restbl_path = args.restbl_path
+            import time
+            start_time = time.time()
+            MergeMods(args.mod_path, restbl_path, args.version, args.compress, args.delete_existing_restbl, args.use_existing_restbl, args.use_checksums, args.verbose)
+            end_time = time.time()
+            execution_time = end_time - start_time
+            print(f"All calculations were executed in {execution_time} seconds")
+        elif args.action == 'merge-restbl':
+            # Replace the file browsing dialog with command line arguments
+            restbl_path0 = args.restbl_path0
+            restbl_path1 = args.restbl_path1
+            restbl0 = Restbl(restbl_path0)
+            restbl1 = Restbl(restbl_path1)
+            changelog0, changelog1, restbl = restbl0.GenerateChangelog(), restbl1.GenerateChangelog(), restbl0
+            print("Calculating merged changelog...")
+            changelog = MergeChangelogs([changelog0, changelog1])
+            print("Applying changes...")
+            restbl.ApplyChangelog(changelog)
+            restbl.Reserialize()
+            if args.compress:
+                with open(restbl.filename, 'rb') as file:
+                    data = file.read()
+                if os.path.exists(restbl.filename + '.zs'):
+                    os.remove(restbl.filename + '.zs')
+                os.rename(restbl.filename, restbl.filename + '.zs')
+                with open(restbl.filename + '.zs', 'wb') as file:
+                    compressor = zs.ZstdCompressor()
+                    file.write(compressor.compress(data))
+            print("Finished")
+        if args.action == 'generate-changelog':
+            gen_changelog(args.log_restbl_path, args.format)
+        elif args.action == 'apply-patches':
+            apply_patches(args.patch_restbl, args.patches_path, compressed=args.compress)
+    else:
+        # GUI version
+        import PySimpleGUI as sg
+        from tkinter import filedialog as fd
+        sg.theme('Black')
+        version_map = {
+            '1.0.0': 100,
+            '1.1.0': 110,
+            '1.1.1': 111,
+            '1.1.2': 112,
+            '1.2.0': 120,
+            '1.2.1': 121,
+        }
+        layout = [
+            [sg.Column([
+                [sg.Text('Options:'), 
+                sg.Checkbox(default=True, text='Compress', size=(8,5), key='compressed'),
+                sg.Checkbox(default=False, text='Use Existing RESTBL', size=(17,5), key='smart_analyze'),
+                sg.Checkbox(default=False, text='Delete Existing RESTBL', size=(19,5), key='delete')],
+                [sg.Text(' ', size=(6, 1)),  # Empty text element to create offset
+                sg.Checkbox(default=True, text='Use Checksums', size=(12,5), key='use_checksums'),
+                sg.Checkbox(default=False, text='Verbose', size=(8,5), key='verbose'),
+                sg.Text('Version:'), sg.Combo(list(version_map.keys()), default_value='1.2.1', key='version', readonly=True)]
+            ], size=(510, 70))],
+            [sg.Frame('Calculate RESTBL from Mod(s)', [
+                [sg.Column([
+                    [sg.Text('Mod Path:', size=(14, 1)), sg.Input(key='mod_path', size=(44, 1)), sg.FolderBrowse()],
+                    [sg.Checkbox(default=False, text='Patch existing RESTBL', key='patch_existing', size=(20, 1))],
+                    [sg.Text('', size=(1, 1)),
+                    sg.Button('Calculate RESTBL', size=(14, 1)),
+                    sg.Text('', size=(1, 1))
+                    ]
+                ], size=(510, 95), element_justification='center')]
+            ])],
+            [sg.Frame('Merge RESTBLs', [
+                [sg.Column([
+                    [sg.Text('RESTBL Path 1:', size=(14, 1)), sg.Input(key='restbl_path0', size=(44, 1)), sg.FileBrowse(file_types=(("RESTBL Files", "*.rsizetable*"),))],
+                    [sg.Text('RESTBL Path 2:', size=(14, 1)), sg.Input(key='restbl_path1', size=(44, 1)), sg.FileBrowse(file_types=(("RESTBL Files", "*.rsizetable*"),))],
+                    [sg.Text('', size=(1, 1)),
+                    sg.Button('Merge RESTBLs', size=(14, 1)),
+                    sg.Text('', size=(1, 1))
+                    ]
+                ], size=(510, 97), element_justification='center')]
+            ])],
+            [sg.Frame('Generate Changelog', [
+                [sg.Column([
+                    [sg.Text('RESTBL Path:', size=(14, 1)), sg.Input(key='log_restbl_path', size=(44, 1)), sg.FileBrowse(file_types=(("RESTBL Files", "*.rsizetable*"),))],
+                    [sg.Text('Format:', size=(14, 1)), sg.Combo(['json', 'rcl', 'yaml'], default_value='json', key='format')],
+                    [sg.Text('', size=(1, 1)),
+                    sg.Button('Generate Changelog', size=(16, 1)),
+                    sg.Text('', size=(1, 1))
+                    ]
+                ], size=(510, 90), element_justification='center')]
+            ])],
+            [sg.Frame('Apply Patches', [
+                [sg.Column([
+                    [sg.Text('RESTBL to patch:', size=(14, 1)), sg.Input(key='patch_restbl', size=(44, 1)), sg.FileBrowse(file_types=(("RESTBL Files", "*.rsizetable*"),))],
+                    [sg.Text('Folder with patches:', size=(14, 1)), sg.Input(key='patches_path', size=(44, 1)), sg.FolderBrowse()],
+                    [sg.Text('', size=(1, 1)),
+                    sg.Button('Apply Patches', size=(14, 1)),
+                    sg.Text('', size=(1, 1))
+                    ]
+                ], size=(510, 97), element_justification='center')]
+            ])],
+            [sg.Button('Exit')]
+        ]
+        window = sg.Window('RESTBL Tool', layout)
+        while True:
+            event, values = window.read()
+            if event == sg.WINDOW_CLOSED or event == 'Exit':
+                break
+            elif event == 'Calculate RESTBL':
+                mod_path = values['mod_path']
+                if not os.path.isdir(mod_path):
+                    sg.Popup('Please enter a correct mod folder path.', title='Error')
+                else:
+                    restbl_to_patch = ''
+                    if values['patch_existing']:
+                        restbl_to_patch = sg.PopupGetFile('Please select a RESTBL file to patch with the new calculated values', file_types=(("RESTBL Files", "*.rsizetable*"),), title='Select RESTBL File')
+                        if not restbl_to_patch:
+                            sg.Popup('Please select a RESTBL file.')
+                            continue
+                    popup = sg.Window('Please wait...', [[sg.Text('Please wait...')]], auto_close=False, disable_close=True, finalize=True)
+                    window.read(timeout=0)
+                    popup.bring_to_front()
+                    import time
+                    start_time = time.time()
+                    version = version_map[values['version']]
+                    MergeMods(mod_path, restbl_to_patch, version, values['compressed'], values['delete'], values['smart_analyze'], values['use_checksums'], values['verbose'])
+                    end_time = time.time()
+                    execution_time = end_time - start_time
+                    print(f"All calculations were executed in {execution_time} seconds")
+                    popup.close()
+                    sg.Popup('Action completed!')
+            elif event == 'Merge RESTBLs':
+                restbl_path0 = values['restbl_path0']
+                restbl_path1 = values['restbl_path1']
+                if not (os.path.isfile(restbl_path0) and os.path.isfile(restbl_path1) and 
+                        (restbl_path0.endswith(('.rsizetable', '.rsizetable.zs')) and 
+                        restbl_path1.endswith(('.rsizetable', '.rsizetable.zs')))):
+                    sg.Popup('Please select 2 resource tables to merge.', title='Error')
+                else:
+                    popup = sg.Window('Please wait...', [[sg.Text('Please wait...')]], auto_close=False, disable_close=True, finalize=True)
+                    window.read(timeout=0)
+                    popup.bring_to_front()
+                    changelog0, changelog1, restbl = merge_restbl(restbl_path0, restbl_path1)
+                    print("Calculating merged changelog...")
+                    changelog = MergeChangelogs([changelog0, changelog1])
+                    print("Applying changes...")
+                    restbl.ApplyChangelog(changelog)
+                    restbl.Reserialize()
+                    if values['compressed']:
+                        with open(restbl.filename, 'rb') as file:
+                            data = file.read()
+                        if os.path.exists(restbl.filename + '.zs'):
+                            os.remove(restbl.filename + '.zs')
+                        os.rename(restbl.filename, restbl.filename + '.zs')
+                        with open(restbl.filename + '.zs', 'wb') as file:
+                            compressor = zs.ZstdCompressor()
+                            file.write(compressor.compress(data))
+                    print("Finished")
+                    popup.close()
+                    sg.Popup('Action completed!')
+            elif event == 'Generate Changelog':
+                log_restbl_path = values['log_restbl_path']
+                if not (os.path.isfile(log_restbl_path) and 
+                        (log_restbl_path.endswith(('.rsizetable', '.rsizetable.zs')))):
+                    sg.Popup('Please select a resource table to generate a changelog', title='Error')
+                else:
+                    popup = sg.Window('Please wait...', [[sg.Text('Please wait...')]], auto_close=False, disable_close=True, finalize=True)
+                    window.read(timeout=0)
+                    popup.bring_to_front()
+                    gen_changelog(values['log_restbl_path'], values['format'])
+                    popup.close()
+                    sg.Popup('Action completed!')
+            elif event == 'Apply Patches':
+                patch_restbl = values['patch_restbl']
+                patches_path = values['patches_path']
+                if not (os.path.isfile(patch_restbl) and os.path.isdir(patches_path) and 
+                        (patch_restbl.endswith(('.rsizetable', '.rsizetable.zs')))):
+                    sg.Popup('Please select a resource table to patch and a folder containing patches.', title='Error')
+                else:
+                    popup = sg.Window('Please wait...', [[sg.Text('Please wait...')]], auto_close=False, disable_close=True, finalize=True)
+                    window.read(timeout=0)
+                    popup.bring_to_front()
+                    apply_patches(values['patch_restbl'], values['patches_path'], compressed=values['compressed'])
+                    print("Finished")
+                    popup.close()
+                    sg.Popup('Action completed!')
+        window.close()
 
 if __name__ == "__main__":
     open_tool()
