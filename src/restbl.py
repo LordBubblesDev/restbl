@@ -1,6 +1,9 @@
 from utils import *
-import zstandard as zs
-import yaml
+try:
+    import zstandard as zs
+    import yaml
+except ImportError:
+    raise ImportError("Would you be so kind as to LEARN TO FUCKING READ INSTRUCTIONS")
 from collections import defaultdict
 from functools import lru_cache
 import numpy as np
@@ -45,7 +48,16 @@ def check_config():
             if os.path.exists(zs_dic_path):
                 break  # Exit the loop if the path is valid
             else:
-                print("Invalid game dump, missing ZsDic.pack.zs. Please try again.")
+                print("")
+                print("Oops! It seems like the magical ink in our quill has run dry, " +
+                      "and the enchanted parchment is refusing to accept your game dump. " +
+                      "Remember, even magical commands require the 'Pack/ZsDic.pack.zs' file " +
+                      "and a sprinkle of pixie dust to work properly.")
+                print("")
+                print("Please make sure you're using a wand-compatible keyboard and try " +
+                      "casting the spell again with the correct incantations. If problems " +
+                      "persist, consult the nearest wise wizard for debugging assistance.")
+                print("")
 
         # Create the config.json file
         with open(config_json_path, 'w') as f:
@@ -779,6 +791,7 @@ def open_tool():
         # GUI version
         import PySimpleGUI as sg
         from tkinter import filedialog as fd
+        from icon import images
         sg.theme('Black')
         version_map = {
             '1.0.0': 100,
@@ -841,7 +854,7 @@ def open_tool():
             ])],
             [sg.Button('Exit')]
         ]
-        window = sg.Window('RESTBL Tool', layout)
+        window = sg.Window('RESTBL Tool', icon=images).Layout(layout)
         while True:
             event, values = window.read()
             if event == sg.WINDOW_CLOSED or event == 'Exit':
