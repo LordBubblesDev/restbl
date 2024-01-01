@@ -478,7 +478,7 @@ def GetFileLists(mod_path):
     return files
 
 # Same as above but stores the estimated entry size as well
-def GetInfo(romfs_path):
+def GetInfo(romfs_path, verbose=False):
     info = {}
     zs = zstd.Zstd()
     for dir,subdir,files in os.walk(romfs_path):
@@ -492,12 +492,13 @@ def GetInfo(romfs_path):
                 if os.path.splitext(filepath)[1] not in ['.bwav', '.rsizetable', '.rcl'] and os.path.splitext(filepath)[0] != r"Pack\ZsDic":
                     filepath = filepath.replace('\\', '/')
                     info[filepath] = CalcSize(full_path)
-                    print(filepath)
+                    if verbose:
+                        print(filepath)
                     if os.path.splitext(filepath)[1] in ['.pack', '.sarc']:
                         archive = sarc.Sarc(zs.Decompress(full_path, no_output=True))
-                        archive_info = archive.ListFileInfo()
+                        archive_info = archive.files
                         for f in archive_info:
-                            size = CalcSize(f, archive_info[f], data=archive_info[f])
+                            size = CalcSize(f, size=len(f["Data"]), data=f["Data"])
                             if f not in info:
                                 info[f] = size
                             else:
@@ -579,7 +580,7 @@ def GetInfoWithChecksum(romfs_path, verbose=False):
                                     if stored_checksum == 0:
                                         add = True
                                     if add:
-                                        size = CalcSize(f["Name"], len(f["Data"]), data=f["Data"])
+                                        size = CalcSize(f["Name"], size=len(f["Data"]), data=f["Data"])
                                         if verbose:
                                             print(f["Name"])
                                         if f["Name"] not in info:
@@ -599,6 +600,7 @@ def GetInfoList(mod_path):
 
 # These are estimates, would be nice to have more precise values
 def CalcSize(file, size=None, data=None):
+    file = file.replace('\\', '/')
     if size is None:
         if data is None:
             size = os.path.getsize(file)
@@ -607,18 +609,22 @@ def CalcSize(file, size=None, data=None):
         size = os.path.getsize(file)
     zs = zstd.Zstd()
     file_extension = os.path.splitext(file)[1]
-    if file_extension in ['.zs', '.zstd'] and file_extension != '.ta.zs':
+    if file_extension in ['.zs', '.zstd'] and not file.endswith('.ta.zs'):
         size = zs.GetDecompressedSize(file)
+        data = zs.Decompress(file, no_output=True)
         file = os.path.splitext(file)[0]
-    elif file_extension in ['.mc']:
+        file_extension = os.path.splitext(file)[1]
+    if file_extension in ['.mc']:
         size = (os.path.getsize(file)) * 5 # MC decompressor wasn't working so this is an estimate of the decompressed size
         file = os.path.splitext(file)[0]
-    elif os.path.splitext(file)[1] == '.bgyml':
+        file_extension = os.path.splitext(file)[1]
+    if file_extension in ['.bgyml', '.byml']:
         size = (size + 1000) * 8
     
     # Add specific size differences for each file type
     size_diff_map = {
         '.bgyml': 0,  # handled separately above
+        '.byml': 0,  # handled separately above
         '.mc': 0,  # handled separately above
         '.ainb': 392,  # + exb allocations, handled separately below
         '.asb': 552,  # +40 per node, handled separately below
@@ -657,7 +663,7 @@ def CalcSize(file, size=None, data=None):
         '.sarc': 4096,
         '.ta.zs': 256,  # compressed size, not decompressed
         '.tscb': 256,
-        '.txtg': 256,
+        '.txtg': 4000,
         '.vsts': 256,
         '.wbr': 256
     }
@@ -708,7 +714,7 @@ def CalcSize(file, size=None, data=None):
         size = (size + 5000) * 3
 
     # Round up to the nearest 0x20 bytes
-    size = ((size + 0x1F) // 0x20) * 0x20
+    #size = ((size + 0x1F) // 0x20) * 0x20
 
     return size
 
