@@ -377,7 +377,7 @@ class Restbl:
 
     # Changelog from analyzing mod directory
     def GenerateChangelogFromMod(self, mod_path, checksum=False, verbose=False):
-        info = GetInfoWithChecksum(mod_path + '/romfs', verbose) if checksum else GetInfo(mod_path + '/romfs')
+        info = GetInfoWithChecksum(mod_path + '/romfs', verbose) if checksum else GetInfo(mod_path + '/romfs', verbose)
         changelog = {"Changes" : {}, "Additions" : {}, "Deletions" : {}}
         if not self.hashmap:
             self._GenerateHashmap()
@@ -487,7 +487,7 @@ def GetInfo(romfs_path, verbose=False):
             filepath = full_path
             if os.path.isfile(filepath):
                 filepath = os.path.join(os.path.relpath(dir, romfs_path), os.path.basename(filepath))
-                if os.path.splitext(filepath)[1] in ['.zs', '.zstd', '.mc']:
+                if os.path.splitext(filepath)[1] in ['.zs', '.zstd', '.mc'] and not file.endswith('.ta.zs'):
                     filepath = os.path.splitext(filepath)[0]
                 if os.path.splitext(filepath)[1] not in ['.bwav', '.rsizetable', '.rcl'] and os.path.splitext(filepath)[0] != r"Pack\ZsDic":
                     filepath = filepath.replace('\\', '/')
@@ -498,11 +498,13 @@ def GetInfo(romfs_path, verbose=False):
                         archive = sarc.Sarc(zs.Decompress(full_path, no_output=True))
                         archive_info = archive.files
                         for f in archive_info:
-                            size = CalcSize(f, data=f["Data"])
-                            if f not in info:
-                                info[f] = size
+                            size = CalcSize(f["Name"], data=f["Data"])
+                            if verbose:
+                                print(f["Name"])
+                            if f["Name"] not in info:
+                                info[f["Name"]] = size
                             else:
-                                info[f] = max(info[f], size)
+                                info[f["Name"]] = max(info[f["Name"]], size)
     info = dict(sorted(info.items()))
     return info
 
@@ -548,7 +550,8 @@ def GetInfoWithChecksum(romfs_path, verbose=False):
                     data = zs.Decompress(full_path, no_output=True)
                     checksum = xxhash.xxh64_intdigest(data)
                     stored_checksum = get_checksum(filepath, checksum)
-                    filepath = os.path.splitext(filepath)[0]
+                    if not file.endswith('.ta.zs'):
+                        filepath = os.path.splitext(filepath)[0]
                 elif os.path.splitext(filepath)[1] in ('.mc'):
                     with open(full_path, 'rb') as f:
                         data = f.read()
@@ -600,7 +603,6 @@ def GetInfoList(mod_path):
 
 # These are estimates, would be nice to have more precise values
 def CalcSize(file, data=None):
-    file = file.replace('\\', '/')
     if data is None:
         with open(file, 'rb') as f:
             data = f.read()
@@ -719,7 +721,7 @@ def CalcSize(file, data=None):
                 if has_exb:
                     new_offset = int.from_bytes(data[offset + 0x20:offset + 0x24], byteorder='little')
                     signature_count = int.from_bytes(data[new_offset + offset:new_offset + offset + 4], byteorder='little')
-            size += 16 + ((signature_count + 1) // 2) * 8
+                    size += 16 + ((signature_count + 1) // 2) * 8
 
         if file == 'Event/EventFlow/Dm_ED_0004.bfevfl':
             size += 192
@@ -728,7 +730,7 @@ def CalcSize(file, data=None):
         size = (size + 5000) * 3
 
     # Round up to the nearest 0x20 bytes
-    #size = ((size + 0x1F) // 0x20) * 0x20
+    size = ((size + 0x1F) // 0x20) * 0x20
 
     return size
 
