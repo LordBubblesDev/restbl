@@ -614,6 +614,8 @@ def CalcSize(file, data=None):
         data = zs.Decompress(file, no_output=True)
         file = os.path.splitext(file)[0]
         file_extension = os.path.splitext(file)[1]
+    if file.endswith('.ta.zs'):
+        size = size + 256
     if file_extension in ['.mc']:
         size = round((os.path.getsize(file)) * 2.3) # MC decompressor wasn't working so this is an estimate of the decompressed size
         file = os.path.splitext(file)[0]
@@ -672,12 +674,12 @@ def CalcSize(file, data=None):
         '.pack': 384,
         '.png': 256,
         '.quad': 256,
-        '.sarc': 4096,
-        '.ta.zs': 256,  # compressed size, not decompressed
+        '.sarc': 384,
         '.tscb': 256,
         '.txtg': 256,
         '.vsts': 256,
-        '.wbr': 256
+        '.wbr': 256,
+        '.zs': 0  # handled separately, for .ta.zs files
     }
     
     if file_extension in size_diff_map:
