@@ -498,7 +498,7 @@ def GetInfo(romfs_path, verbose=False):
                         archive = sarc.Sarc(zs.Decompress(full_path, no_output=True))
                         archive_info = archive.files
                         for f in archive_info:
-                            size = CalcSize(f, size=len(f["Data"]), data=f["Data"])
+                            size = CalcSize(f, data=f["Data"])
                             if f not in info:
                                 info[f] = size
                             else:
@@ -580,7 +580,7 @@ def GetInfoWithChecksum(romfs_path, verbose=False):
                                     if stored_checksum == 0:
                                         add = True
                                     if add:
-                                        size = CalcSize(f["Name"], size=len(f["Data"]), data=f["Data"])
+                                        size = CalcSize(f["Name"], data=f["Data"])
                                         if verbose:
                                             print(f["Name"])
                                         if f["Name"] not in info:
@@ -599,14 +599,14 @@ def GetInfoList(mod_path):
     return files
 
 # These are estimates, would be nice to have more precise values
-def CalcSize(file, size=None, data=None):
+def CalcSize(file, data=None):
     file = file.replace('\\', '/')
-    if size is None:
-        if data is None:
-            size = os.path.getsize(file)
-        else:
-            size = len(data)
-        size = os.path.getsize(file)
+    if data is None:
+        with open(file, 'rb') as f:
+            data = f.read()
+        size = len(data)
+    else:
+        size = len(data)
     zs = zstd.Zstd()
     file_extension = os.path.splitext(file)[1]
     if file_extension in ['.zs', '.zstd'] and not file.endswith('.ta.zs'):
@@ -615,11 +615,23 @@ def CalcSize(file, size=None, data=None):
         file = os.path.splitext(file)[0]
         file_extension = os.path.splitext(file)[1]
     if file_extension in ['.mc']:
-        size = (os.path.getsize(file)) * 5 # MC decompressor wasn't working so this is an estimate of the decompressed size
+        size = round((os.path.getsize(file)) * 2.3) # MC decompressor wasn't working so this is an estimate of the decompressed size
         file = os.path.splitext(file)[0]
         file_extension = os.path.splitext(file)[1]
     if file_extension in ['.bgyml', '.byml']:
         size = (size + 1000) * 8
+
+    shader_archives = ['Lib/agl/agl_resource.Nin_NX_NVN.release.sarc',
+                        'Lib/gsys/gsys_resource.Nin_NX_NVN.release.sarc',
+                        'Lib/Terrain/tera_resource.Nin_NX_NVN.release.sarc',
+                        'Shader/ApplicationPackage.Nin_NX_NVN.release.sarc']
+    is_shader_archive = False
+    for path in shader_archives:
+        if path in file:
+            is_shader_archive = True
+            break
+    if is_shader_archive:
+        size += 4096
     
     # Add specific size differences for each file type
     size_diff_map = {
@@ -663,7 +675,7 @@ def CalcSize(file, size=None, data=None):
         '.sarc': 4096,
         '.ta.zs': 256,  # compressed size, not decompressed
         '.tscb': 256,
-        '.txtg': 4000,
+        '.txtg': 256,
         '.vsts': 256,
         '.wbr': 256
     }
