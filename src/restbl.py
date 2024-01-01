@@ -489,12 +489,12 @@ def GetInfo(romfs_path, verbose=False):
                 filepath = os.path.join(os.path.relpath(dir, romfs_path), os.path.basename(filepath))
                 if os.path.splitext(filepath)[1] in ['.zs', '.zstd', '.mc'] and not file.endswith('.ta.zs'):
                     filepath = os.path.splitext(filepath)[0]
-                if os.path.splitext(filepath)[1] not in ['.bwav', '.rsizetable', '.rcl'] and os.path.splitext(filepath)[0] != r"Pack\ZsDic":
+                if os.path.splitext(filepath)[1] not in ['.bwav', '.rsizetable', '.rcl', '.webm'] and os.path.splitext(filepath)[0] != r"Pack\ZsDic":
                     filepath = filepath.replace('\\', '/')
                     info[filepath] = CalcSize(full_path)
                     if verbose:
                         print(filepath)
-                    if os.path.splitext(filepath)[1] in ['.pack', '.sarc']:
+                    if os.path.splitext(filepath)[1] == '.pack':
                         archive = sarc.Sarc(zs.Decompress(full_path, no_output=True))
                         archive_info = archive.files
                         for f in archive_info:
@@ -563,14 +563,14 @@ def GetInfoWithChecksum(romfs_path, verbose=False):
                         data = f.read()
                     checksum = xxhash.xxh64_intdigest(data)
                     stored_checksum = get_checksum(filepath, checksum)
-                if os.path.splitext(filepath)[1] not in ['.bwav', '.rsizetable', '.rcl'] and os.path.splitext(filepath)[0] != r"Pack\ZsDic":
+                if os.path.splitext(filepath)[1] not in ['.bwav', '.rsizetable', '.rcl', '.webm'] and os.path.splitext(filepath)[0] != r"Pack\ZsDic":
                     if stored_checksum == 0:
                         add = True
                         if add:
                             info[filepath] = CalcSize(full_path)
                             if verbose:  # Only print if verbose is True
                                 print(filepath)
-                            if os.path.splitext(filepath)[1] in ['.pack', '.sarc']:
+                            if os.path.splitext(filepath)[1] == '.pack':
                                 archive = sarc.Sarc(data)
                                 archive_info = archive.files
                                 for f in archive_info:
@@ -699,10 +699,10 @@ def CalcSize(file, data=None):
         elif file_extension == '.bstar':
             if data is None:
                 with open(file, 'rb') as f:
-                    f.seek(0x0C)
+                    f.seek(0x08)
                     entry_count = int.from_bytes(f.read(4), byteorder='little')
             else:
-                entry_count = int.from_bytes(data[0x0C:0x10], byteorder='little')
+                entry_count = int.from_bytes(data[0x08:0x0C], byteorder='little')
             size += 8 * entry_count
         elif file_extension == '.ainb':
             if data is None:
@@ -935,11 +935,10 @@ def open_tool():
         ]
     ]
     window = sg.Window('RESTBL Tool', icon=images).Layout(layout)
-    event, values = window.read()  # Add this line to initialize event and values
     while True:
+        event, values = window.read()
         if event == sg.WINDOW_CLOSED or event == 'Exit':
             break
-        event, values = window.read()
         if event == 'Calculate RESTBL':
             import gc
             import threading
