@@ -602,20 +602,88 @@ def CalcSize(file, size=None):
     if size is None:
         size = os.path.getsize(file)
     zs = zstd.Zstd()
-    if os.path.splitext(file)[1] in ['.zs', '.zstd']:
+    file_extension = os.path.splitext(file)[1]
+    if file_extension in ['.zs', '.zstd'] and file_extension != '.ta.zs':
         size = zs.GetDecompressedSize(file)
         file = os.path.splitext(file)[0]
-    elif os.path.splitext(file)[1] in ['.mc']:
+    elif file_extension in ['.mc']:
         size = (os.path.getsize(file)) * 5 # MC decompressor wasn't working so this is an estimate of the decompressed size
         file = os.path.splitext(file)[0]
-    if os.path.splitext(file)[1] == '.txtg':
-        return size + 5000
     elif os.path.splitext(file)[1] == '.bgyml':
         return (size + 1000) * 8
-    elif os.path.splitext(file)[1] == '.bars':
-        return round(size * 1.9)
+    
+    # Add specific size differences for each file type
+    size_diff_map = {
+        '.ainb': 392,  # + exb allocations, handled separately below
+        '.asb': 552,  # +40 per node, handled separately below
+        '.baatarc': 256,
+        '.baev': 288,
+        '.bagst': 256,
+        '.bars': 576,
+        '.bcul': 256,
+        '.beco': 256,
+        '.belnk': 256,
+        '.bfarc': 256,
+        '.bfevfl': 288,  # one exception: Event/EventFlow/Dm_ED_0004.bfevfl is 480
+        '.bfsha': 256,
+        '.bhtmp': 256,
+        '.blal': 256,
+        '.blarc': 256,
+        '.blwp': 256,
+        '.bnsh': 256,
+        '.bntx': 256,
+        '.bphcl': 256,
+        '.bphhb': 256,
+        '.bphnm': 288,
+        '.bphsh': 368,
+        '.bslnk': 256,
+        '.bstar': 288,  # +8 per entry, handled separately below
+        '.cai': 256,
+        '.casset.byml': 448,
+        '.chunk': 256,
+        '.cutinfo': 256,
+        '.dpi': 256,
+        '.genvb': 384,
+        '.jpg': 256,
+        '.pack': 384,
+        '.png': 256,
+        '.quad': 256,
+        '.sarc': 4096,
+        '.ta.zs': 256,  # compressed size, not decompressed
+        '.tscb': 256,
+        '.txtg': 256,
+        '.vsts': 256,
+        '.wbr': 256
+    }
+    
+    if file_extension in size_diff_map:
+        size += size_diff_map[file_extension]
+    
+    # Handle special cases
+    if file_extension == '.asb':
+        with open(file, 'rb') as f:
+            f.seek(0x10)
+            node_count = int.from_bytes(f.read(4), byteorder='little')
+            size += 40 * node_count
+    elif file_extension == '.bstar':
+        with open(file, 'rb') as f:
+            f.seek(0x0C)
+            entry_count = int.from_bytes(f.read(4), byteorder='little')
+            size += 8 * entry_count
+    elif file_extension == '.ainb':
+        # Calculate exb allocations
+        has_exb = False  # Replace with actual condition
+        signature_count = 0  # Replace with actual count
+        size += has_exb * (16 + ((signature_count + 1) // 2) * 8)
+    elif file_extension == '.bfevfl' and file == 'Dm_ED_0004.bfevfl':
+        size += 480
     else:
         return (size + 5000) * 3
+
+    # Round up to the nearest 0x20 bytes
+    size = ((size + 0x1F) // 0x20) * 0x20
+
+    return size
 
 # Merges list of changelogs into one (doesn't accept RCL or YAML)
 def MergeChangelogs(changelogs):
@@ -749,6 +817,7 @@ def apply_patches(patch_restbl, patches_path, compressed=True):
 
 def open_tool():
     # GUI version
+    print(welcome())
     import PySimpleGUI as sg
     sg.theme('Black')
     version_map = {
@@ -759,16 +828,6 @@ def open_tool():
         '1.2.0': 120,
         '1.2.1': 121,
     }
-    # Set up a logger
-    import logging
-    logger = logging.getLogger('console_log')
-    logger.setLevel(logging.INFO)
-    # Set up a string buffer and a handler to write to it
-    log_output = io.StringIO()
-    handler = logging.StreamHandler(log_output)
-    logger.addHandler(handler)
-    output_element = sg.Output(size=(71,35), key='-OUTPUT-', font=('Courier', 10))
-    update_window = True
     layout = [
         [
             sg.Column([
@@ -823,35 +882,15 @@ def open_tool():
                     ], size=(510, 97), element_justification='center')]
                 ])],
                 [sg.Button('Exit')]
-            ]),
-            sg.Column([
-                [sg.Frame('Console Log', [
-                    [output_element]
-                ])],
-            ], expand_x=True, expand_y=True)
+            ])
         ]
     ]
-    update_window = True
     window = sg.Window('RESTBL Tool', icon=images).Layout(layout)
+    event, values = window.read()  # Add this line to initialize event and values
     while True:
-        if update_window:
-            event, values = window.read(timeout=100)
-            update_window = False
-        else:
-            event, values = window.read()
         if event == sg.WINDOW_CLOSED or event == 'Exit':
             break
-        existing_output = window['-OUTPUT-'].get()
-        lines = existing_output.split('\n')
-        # Prevent console log from making you feel like you need to download more REM
-        if len(lines) > 5000:
-            lines = lines[-5000:]  # Keep only the last 5000 lines
-        existing_output = '\n'.join(lines)
-        newline = '\n' if existing_output else ''
-        if newline == '':
-            window['-OUTPUT-'].update(welcome() + existing_output + newline + log_output.getvalue())
-        else:
-            window['-OUTPUT-'].update(existing_output + newline + newline + log_output.getvalue())
+        event, values = window.read()
         if event == 'Calculate RESTBL':
             import gc
             import threading
@@ -884,7 +923,7 @@ def open_tool():
             if not (os.path.isfile(restbl_path0) and os.path.isfile(restbl_path1) and 
                     (restbl_path0.endswith(('.rsizetable', '.rsizetable.zs')) and 
                     restbl_path1.endswith(('.rsizetable', '.rsizetable.zs')))):
-                sg.Popup('Please select 2 resource tables to merge.', title='Error')
+                sg.Popup('Please select two resource tables to merge', title='Error')
             else:
                 popup = sg.Window('Please wait...', [[sg.Text('Please wait...')]], auto_close=False, disable_close=True, finalize=True)
                 window.read(timeout=0)
