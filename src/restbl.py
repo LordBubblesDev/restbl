@@ -493,11 +493,11 @@ def GetInfo(romfs_path):
                     filepath = filepath.replace('\\', '/')
                     info[filepath] = CalcSize(full_path)
                     print(filepath)
-                    if os.path.splitext(filepath)[1] == '.pack':
+                    if os.path.splitext(filepath)[1] in ['.pack', '.sarc']:
                         archive = sarc.Sarc(zs.Decompress(full_path, no_output=True))
                         archive_info = archive.ListFileInfo()
                         for f in archive_info:
-                            size = CalcSize(f, archive_info[f])
+                            size = CalcSize(f, archive_info[f], data=archive_info[f])
                             if f not in info:
                                 info[f] = size
                             else:
@@ -579,7 +579,7 @@ def GetInfoWithChecksum(romfs_path, verbose=False):
                                     if stored_checksum == 0:
                                         add = True
                                     if add:
-                                        size = CalcSize(f["Name"], len(f["Data"]))
+                                        size = CalcSize(f["Name"], len(f["Data"]), data=f["Data"])
                                         if verbose:
                                             print(f["Name"])
                                         if f["Name"] not in info:
@@ -598,8 +598,12 @@ def GetInfoList(mod_path):
     return files
 
 # These are estimates, would be nice to have more precise values
-def CalcSize(file, size=None):
+def CalcSize(file, size=None, data=None):
     if size is None:
+        if data is None:
+            size = os.path.getsize(file)
+        else:
+            size = len(data)
         size = os.path.getsize(file)
     zs = zstd.Zstd()
     file_extension = os.path.splitext(file)[1]
@@ -610,10 +614,12 @@ def CalcSize(file, size=None):
         size = (os.path.getsize(file)) * 5 # MC decompressor wasn't working so this is an estimate of the decompressed size
         file = os.path.splitext(file)[0]
     elif os.path.splitext(file)[1] == '.bgyml':
-        return (size + 1000) * 8
+        size = (size + 1000) * 8
     
     # Add specific size differences for each file type
     size_diff_map = {
+        '.bgyml': 0,  # handled separately above
+        '.mc': 0,  # handled separately above
         '.ainb': 392,  # + exb allocations, handled separately below
         '.asb': 552,  # +40 per node, handled separately below
         '.baatarc': 256,
@@ -659,26 +665,47 @@ def CalcSize(file, size=None):
     if file_extension in size_diff_map:
         size += size_diff_map[file_extension]
     
-    # Handle special cases
-    if file_extension == '.asb':
-        with open(file, 'rb') as f:
-            f.seek(0x10)
-            node_count = int.from_bytes(f.read(4), byteorder='little')
+        # Handle special cases
+        if file_extension == '.asb':
+            if data is None:
+                with open(file, 'rb') as f:
+                    f.seek(0x10)
+                    node_count = int.from_bytes(f.read(4), byteorder='little')
+            else:
+                node_count = int.from_bytes(data[0x10:0x14], byteorder='little')
             size += 40 * node_count
-    elif file_extension == '.bstar':
-        with open(file, 'rb') as f:
-            f.seek(0x0C)
-            entry_count = int.from_bytes(f.read(4), byteorder='little')
+        elif file_extension == '.bstar':
+            if data is None:
+                with open(file, 'rb') as f:
+                    f.seek(0x0C)
+                    entry_count = int.from_bytes(f.read(4), byteorder='little')
+            else:
+                entry_count = int.from_bytes(data[0x0C:0x10], byteorder='little')
             size += 8 * entry_count
-    elif file_extension == '.ainb':
-        # Calculate exb allocations
-        has_exb = False  # Replace with actual condition
-        signature_count = 0  # Replace with actual count
-        size += has_exb * (16 + ((signature_count + 1) // 2) * 8)
-    elif file_extension == '.bfevfl' and file == 'Dm_ED_0004.bfevfl':
-        size += 480
+        elif file_extension == '.ainb':
+            if data is None:
+                with open(file, 'rb') as f:
+                    f.seek(0x44)
+                    offset = int.from_bytes(f.read(4), byteorder='little')
+                    has_exb = offset != 0
+                    if has_exb:
+                        f.seek(offset + 0x20)
+                        new_offset = int.from_bytes(f.read(4), byteorder='little')
+                        f.seek(new_offset + offset)
+                        signature_count = int.from_bytes(f.read(4), byteorder='little')
+            else:
+                offset = int.from_bytes(data[0x44:0x48], byteorder='little')
+                has_exb = offset != 0
+                if has_exb:
+                    new_offset = int.from_bytes(data[offset + 0x20:offset + 0x24], byteorder='little')
+                    signature_count = int.from_bytes(data[new_offset + offset:new_offset + offset + 4], byteorder='little')
+            size += 16 + ((signature_count + 1) // 2) * 8
+
+        if file == 'Event/EventFlow/Dm_ED_0004.bfevfl':
+            size += 192
+
     else:
-        return (size + 5000) * 3
+        size = (size + 5000) * 3
 
     # Round up to the nearest 0x20 bytes
     size = ((size + 0x1F) // 0x20) * 0x20
