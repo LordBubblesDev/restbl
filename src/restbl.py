@@ -389,16 +389,15 @@ class Restbl:
                 hash = binascii.crc32(file.encode()) if isinstance(file, str) else file
                 add = False
                 if checksum:
-                    # Only overwrite if the entry is larger than the original entry
-                    # This is mostly in case the mod contains multiple copies of a file in a pack of differing sizes
                     if file in defaults["Collision Table"] and file_info > defaults["Collision Table"][file]:
                         add = True
                     elif hash in defaults["Hash Table"] and file_info > defaults["Hash Table"][hash]:
                         add = True
-                    else:
-                        add = True
                 else:
-                    add = True
+                    if file in defaults["Collision Table"] and file_info != defaults["Collision Table"][file]:
+                        add = True
+                    elif hash in defaults["Hash Table"] and file_info != defaults["Hash Table"][hash]:
+                        add = True
                 if add:
                     if file in strings or file in self.collision_table:
                         changelog["Changes"][file] = file_info
@@ -616,12 +615,14 @@ def CalcSize(file, data=None):
         data = zs.Decompress(file, no_output=True)
         file = os.path.splitext(file)[0]
         file_extension = os.path.splitext(file)[1]
-    if file.endswith('.ta.zs'):
-        size = size + 256
     if file_extension in ['.mc']:
         size = round((os.path.getsize(file)) * 2.3) # MC decompressor wasn't working so this is an estimate of the decompressed size
         file = os.path.splitext(file)[0]
         file_extension = os.path.splitext(file)[1]
+    # Round up to the nearest 0x20 bytes
+    size = ((size + 0x1F) // 0x20) * 0x20
+    if file.endswith('.ta.zs'):
+        size = size + 256
     if file_extension in ['.bgyml', '.byml']:
         size = (size + 1000) * 8
 
@@ -669,6 +670,7 @@ def CalcSize(file, data=None):
         '.cai': 256,
         '.casset.byml': 448,
         '.chunk': 256,
+        '.crbin': 256,
         '.cutinfo': 256,
         '.dpi': 256,
         '.genvb': 384,
@@ -679,6 +681,7 @@ def CalcSize(file, data=None):
         '.sarc': 384,
         '.tscb': 256,
         '.txtg': 256,
+        '.txt': 256,
         '.vsts': 256,
         '.wbr': 256,
         '.zs': 0  # handled separately, for .ta.zs files
@@ -693,9 +696,24 @@ def CalcSize(file, data=None):
                 with open(file, 'rb') as f:
                     f.seek(0x10)
                     node_count = int.from_bytes(f.read(4), byteorder='little')
+                    f.seek(0x60)
+                    offset = int.from_bytes(f.read(4), byteorder='little')
             else:
                 node_count = int.from_bytes(data[0x10:0x14], byteorder='little')
+                offset = int.from_bytes(data[0x60:0x64], byteorder='little')
             size += 40 * node_count
+            has_exb = offset != 0
+            if has_exb:
+                if data is None:
+                    with open(file, 'rb') as f:
+                        f.seek(offset + 0x20)
+                        new_offset = int.from_bytes(f.read(4), byteorder='little')
+                        f.seek(new_offset + offset)
+                        signature_count = int.from_bytes(f.read(4), byteorder='little')
+                else:
+                    new_offset = int.from_bytes(data[offset + 0x20:offset + 0x24], byteorder='little')
+                    signature_count = int.from_bytes(data[new_offset + offset:new_offset + offset + 4], byteorder='little')
+                size += 16 + ((signature_count + 1) // 2) * 8
         elif file_extension == '.bstar':
             if data is None:
                 with open(file, 'rb') as f:
@@ -728,9 +746,6 @@ def CalcSize(file, data=None):
 
     else:
         size = (size + 5000) * 3
-
-    # Round up to the nearest 0x20 bytes
-    size = ((size + 0x1F) // 0x20) * 0x20
 
     return size
 
