@@ -623,7 +623,7 @@ def CalcSize(file, data=None):
     size = ((size + 0x1F) // 0x20) * 0x20
     if file.endswith('.ta.zs'):
         size = size + 256
-    if file_extension in ['.bgyml', '.byml']:
+    if file_extension == '.bgyml':
         size = (size + 1000) * 8
 
     shader_archives = ['Lib/agl/agl_resource.Nin_NX_NVN.release.sarc',
@@ -641,7 +641,6 @@ def CalcSize(file, data=None):
     # Add specific size differences for each file type
     size_diff_map = {
         '.bgyml': 0,  # handled separately above
-        '.byml': 0,  # handled separately above
         '.mc': 0,  # handled separately above
         '.ainb': 392,  # + exb allocations, handled separately below
         '.asb': 552,  # +40 per node, handled separately below
@@ -667,6 +666,7 @@ def CalcSize(file, data=None):
         '.bphsh': 368,
         '.bslnk': 256,
         '.bstar': 288,  # +8 per entry, handled separately below
+        '.byml': 256,
         '.cai': 256,
         '.casset.byml': 448,
         '.chunk': 256,
