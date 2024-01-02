@@ -626,17 +626,17 @@ def CalcSize(file, data=None):
     if file_extension == '.bgyml':
         size = (size + 1000) * 8
 
-    shader_archives = ['Lib/agl/agl_resource.Nin_NX_NVN.release.sarc',
-                        'Lib/gsys/gsys_resource.Nin_NX_NVN.release.sarc',
-                        'Lib/Terrain/tera_resource.Nin_NX_NVN.release.sarc',
-                        'Shader/ApplicationPackage.Nin_NX_NVN.release.sarc']
+    shader_archives = ['agl_resource.Nin_NX_NVN.release.sarc',
+                        'gsys_resource.Nin_NX_NVN.release.sarc',
+                        'tera_resource.Nin_NX_NVN.release.sarc',
+                        'ApplicationPackage.Nin_NX_NVN.release.sarc']
     is_shader_archive = False
     for path in shader_archives:
-        if path in file:
+        if path in os.path.abspath(file):
             is_shader_archive = True
             break
     if is_shader_archive:
-        size += 4096
+        size += 3712
     
     # Add specific size differences for each file type
     size_diff_map = {
@@ -741,8 +741,10 @@ def CalcSize(file, data=None):
                     signature_count = int.from_bytes(data[new_offset + offset:new_offset + offset + 4], byteorder='little')
                     size += 16 + ((signature_count + 1) // 2) * 8
 
-        if file == 'Event/EventFlow/Dm_ED_0004.bfevfl':
+        if 'Event/EventFlow/Dm_ED_0004.bfevfl' in file:
             size += 192
+        if 'static.Nin_NX_NVN.esetb.byml' in os.path.abspath(file):
+            size += 3840
 
     else:
         size = (size + 5000) * 3
