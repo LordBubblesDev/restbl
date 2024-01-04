@@ -6,6 +6,7 @@ dist/
 *.pyc
 changelog.json
 hashtable.json
+test.json
 *.zs
 *.bat
 restbl.spec
