@@ -389,9 +389,9 @@ class Restbl:
                 hash = binascii.crc32(file.encode()) if isinstance(file, str) else file
                 add = True
                 if checksum:
-                    if file in defaults["Collision Table"] and file_info <= defaults["Collision Table"][file]:
+                    if os.path.splitext(file)[1] in ['.bgyml', '.ainb', '.bphhb', '.bphcl'] and file in defaults["Collision Table"] and file_info <= defaults["Collision Table"][file]:
                         add = False
-                    elif hash in defaults["Hash Table"] and file_info <= defaults["Hash Table"][hash]:
+                    elif os.path.splitext(file)[1] in ['.bgyml', '.ainb', '.bphhb', '.bphcl'] and hash in defaults["Hash Table"] and file_info <= defaults["Hash Table"][hash]:
                         add = False
                 else:
                     if file in defaults["Collision Table"] and file_info == defaults["Collision Table"][file]:
