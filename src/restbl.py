@@ -387,17 +387,17 @@ class Restbl:
         for file, file_info in info.items():
             if os.path.splitext(file)[1] not in ['.bwav', '.rsizetable'] and os.path.splitext(file)[0] != r"Pack\ZsDic":
                 hash = binascii.crc32(file.encode()) if isinstance(file, str) else file
-                add = False
+                add = True
                 if checksum:
-                    if file in defaults["Collision Table"] and file_info > defaults["Collision Table"][file]:
-                        add = True
-                    elif hash in defaults["Hash Table"] and file_info > defaults["Hash Table"][hash]:
-                        add = True
+                    if file in defaults["Collision Table"] and file_info <= defaults["Collision Table"][file]:
+                        add = False
+                    elif hash in defaults["Hash Table"] and file_info <= defaults["Hash Table"][hash]:
+                        add = False
                 else:
-                    if file in defaults["Collision Table"] and file_info != defaults["Collision Table"][file]:
-                        add = True
-                    elif hash in defaults["Hash Table"] and file_info != defaults["Hash Table"][hash]:
-                        add = True
+                    if file in defaults["Collision Table"] and file_info == defaults["Collision Table"][file]:
+                        add = False
+                    elif hash in defaults["Hash Table"] and file_info == defaults["Hash Table"][hash]:
+                        add = False
                 if add:
                     if file in strings or file in self.collision_table:
                         changelog["Changes"][file] = file_info
