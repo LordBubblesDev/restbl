@@ -1,2 +1,11 @@
 __pycache__/
+test/
+patches/
+build/
+dist/
 *.pyc
+changelog.json
+hashtable.json
+*.zs
+*.bat
+restbl.spec
