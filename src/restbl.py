@@ -886,7 +886,9 @@ def GenerateRestblFromSingleMod(mod_path, restbl_path='', version=121, compresse
         start_time = time.time()
         if not(os.path.exists(restbl_path)):
             print("Creating empty resource size table...")
-            filename = os.path.join(mod_path, "romfs", "System", "Resource", 'ResourceSizeTable.Product.' + str(version).replace('.', '') + '.rsizetable')
+            directory = os.path.join(mod_path, "romfs", "System", "Resource")
+            os.makedirs(directory, exist_ok=True)
+            filename = os.path.join(directory, 'ResourceSizeTable.Product.' + str(version).replace('.', '') + '.rsizetable')
             with open(filename, 'wb') as file:
                 buffer = WriteStream(file)
                 buffer.write("RESTBL".encode('utf-8'))
