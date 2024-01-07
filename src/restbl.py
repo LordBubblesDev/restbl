@@ -1162,7 +1162,7 @@ if __name__ == "__main__":
                 restbl_path = ''  # Set restbl_path to an empty string if it's not provided
             else:
                 restbl_path = args.restbl_path
-            MergeMods(args.mods_path, restbl_path, args.version, args.compress, args.delete_existing_restbl, args.use_existing_restbl, args.use_checksums, args.verbose)
+            MergeMods(args.mod_path, restbl_path, args.version, args.compress, args.delete_existing_restbl, args.use_existing_restbl, args.use_checksums, args.verbose)
         elif args.action == 'merge-restbl':
             # Replace the file browsing dialog with command line arguments
             restbl_path0 = args.restbl_path0
