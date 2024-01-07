@@ -949,17 +949,18 @@ def open_tool():
                     [sg.Text(' ', size=(6, 1)),  # Empty text element to create offset
                     sg.Checkbox(default=True, text='Use Checksums', size=(12,5), key='use_checksums'),
                     sg.Checkbox(default=False, text='Verbose', size=(8,5), key='verbose'),
-                    sg.Text('Version:'), sg.Combo(list(version_map.keys()), default_value='1.2.1', key='version', readonly=True)]
-                ], size=(510, 70))],
+                    sg.Text('Version:'), sg.Combo(list(version_map.keys()), default_value='1.2.1', key='version', readonly=True)],
+                    [sg.Text(' ', size=(6, 1)),  # Empty text element to create offset
+                    sg.Checkbox(default=False, text='Patch existing RESTBL', key='patch_existing', size=(20, 1))]
+                ], size=(510, 90))],
                 [sg.Frame('Calculate RESTBL from Mod(s)', [
                     [sg.Column([
                         [sg.Text('Mod Path:', size=(14, 1)), sg.Input(key='mod_path', size=(44, 1)), sg.FolderBrowse()],
-                        [sg.Checkbox(default=False, text='Patch existing RESTBL', key='patch_existing', size=(20, 1))],
                         [sg.Text('', size=(1, 1)),
                         sg.Button('Calculate RESTBL', size=(14, 1)),
                         sg.Text('', size=(1, 1))
                         ]
-                    ], size=(510, 95), element_justification='center')]
+                    ], size=(510, 70), element_justification='center')]
                 ])],
                 [sg.Frame('Merge RESTBLs', [
                     [sg.Column([
@@ -969,7 +970,7 @@ def open_tool():
                         sg.Button('Merge RESTBLs', size=(14, 1)),
                         sg.Text('', size=(1, 1))
                         ]
-                    ], size=(510, 97), element_justification='center')]
+                    ], size=(510, 95), element_justification='center')]
                 ])],
                 [sg.Frame('Generate Changelog', [
                     [sg.Column([
@@ -994,12 +995,11 @@ def open_tool():
                 [sg.Frame('Calculate RESTBL from Single Mod', [
                     [sg.Column([
                         [sg.Text('Mod Path:', size=(14, 1)), sg.Input(key='single_mod_path', size=(44, 1)), sg.FolderBrowse()],
-                        [sg.Checkbox(default=False, text='Patch existing RESTBL', key='single_patch_existing', size=(20, 1))],
                         [sg.Text('', size=(1, 1)),
                         sg.Button('Calculate (single mod)', size=(20, 1)),
                         sg.Text('', size=(1, 1))
                         ]
-                    ], size=(510, 95), element_justification='center')]
+                    ], size=(510, 70), element_justification='center')]
                 ])],
                 [sg.Button('Exit')]
             ])
@@ -1011,6 +1011,14 @@ def open_tool():
         if event == sg.WINDOW_CLOSED or event == 'Exit':
             break
 
+        if values['patch_existing']:
+            restbl_to_patch = sg.PopupGetFile('Please select a RESTBL file to patch with the new calculated values', file_types=(("RESTBL Files", "*.rsizetable*"),), title='Select RESTBL File')
+            if not restbl_to_patch:
+                sg.Popup('Please select a RESTBL file.')
+                continue
+        else:
+            restbl_to_patch = ''
+
         if event == 'Calculate RESTBL':
             import gc
             import threading
@@ -1018,12 +1026,6 @@ def open_tool():
             if not os.path.isdir(mod_path):
                 sg.Popup('Please enter a correct mod folder path.', title='Error')
             else:
-                restbl_to_patch = ''
-                if values['patch_existing']:
-                    restbl_to_patch = sg.PopupGetFile('Please select a RESTBL file to patch with the new calculated values', file_types=(("RESTBL Files", "*.rsizetable*"),), title='Select RESTBL File')
-                    if not restbl_to_patch:
-                        sg.Popup('Please select a RESTBL file.')
-                        continue
                 version = version_map[values['version']]
                 popup = sg.Window('Please wait...', [[sg.Text('Please wait...')]], auto_close=False, disable_close=True, finalize=True)
                 thread = threading.Thread(target=MergeMods, args=(mod_path, restbl_to_patch, version, values['compressed'], values['delete'], values['smart_analyze'], values['use_checksums'], values['verbose']))
@@ -1103,12 +1105,6 @@ def open_tool():
             if not os.path.isdir(mod_path):
                 sg.Popup('Please enter a correct mod folder path.', title='Error')
             else:
-                restbl_to_patch = ''
-                if values['single_patch_existing']:
-                    restbl_to_patch = sg.PopupGetFile('Please select a RESTBL file to patch with the new calculated values', file_types=(("RESTBL Files", "*.rsizetable*"),), title='Select RESTBL File')
-                    if not restbl_to_patch:
-                        sg.Popup('Please select a RESTBL file.')
-                        continue
                 version = version_map[values['version']]
                 popup = sg.Window('Please wait...', [[sg.Text('Please wait...')]], auto_close=False, disable_close=True, finalize=True)
                 thread = threading.Thread(target=GenerateRestblFromSingleMod, args=(mod_path, restbl_to_patch, version, values['compressed'], values['use_checksums'], values['verbose']))
