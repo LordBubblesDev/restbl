@@ -67,9 +67,9 @@ Using the `--use-checksums` option will compare each file in the mod with the un
 
 When using `merge-mods`, the argument `--mod-path C:\Path\to\mods` is required. This should be the folder so that the path `[selected_path]/[mod_name]/romfs` exists (can contain 1 or multiple mods).
 
-> restbl.exe --action merge-mods --use-checksums --compress --mod-path "C:\Users\username\AppData\Roaming\Ryujinx\mods\contents\0100f2c0115b6000"
+> restbl.exe --action merge-mods --use-checksums --compress --mod-path "C:\Users\username\AppData\Roaming\Ryujinx\mods\contents\0100f2c0115b6000" --version 120
 
-> restbl.exe -a merge-mods  -cs -c -m "C:\Users\username\AppData\Roaming\Ryujinx\mods\contents\0100f2c0115b6000"
+> restbl.exe -a merge-mods  -cs -c -m "C:\Users\username\AppData\Roaming\Ryujinx\mods\contents\0100f2c0115b6000" -ver 120
 
 ### - merge-restbl
 This option will create a merged RESTBL file from the two provided RESTBL files. Similar to the previous option, using `--compress` will compress the generated RESTBL file with Zstd compression.
@@ -102,9 +102,9 @@ When using this mode, the resource table will automatically be generated within 
 
 It uses the exact same arguments as `merge-mods`, except that `--mod-path` requires the path to a single mod containing a `romfs` folder
 
-> restbl.exe --action single-mod --use-checksums --compress --mod-path "C:\Users\username\AppData\Roaming\Ryujinx\mods\contents\0100f2c0115b6000\ModName"
+> restbl.exe --action single-mod --use-checksums --compress --mod-path "C:\Users\username\AppData\Roaming\Ryujinx\mods\contents\0100f2c0115b6000\ModName" --version 112
 
-> restbl.exe -a merge-mods  -cs -c -m "C:\Users\username\AppData\Roaming\Ryujinx\mods\contents\0100f2c0115b6000\ModName"
+> restbl.exe -a merge-mods  -cs -c -m "C:\Users\username\AppData\Roaming\Ryujinx\mods\contents\0100f2c0115b6000\ModName" -ver 112
 
 
 ## CLI Help
