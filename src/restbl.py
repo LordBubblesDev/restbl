@@ -918,7 +918,7 @@ def GenerateRestblFromSingleMod(mod_path, restbl_path='', version=121, compresse
         end_time = time.time()
         execution_time = end_time - start_time
         print(f"All calculations were executed in {execution_time} seconds")
-        print("RESTBL generated at:", restbl.filename)
+        print("RESTBL saved at:", restbl.filename)
     finally:
         global index_cache, checksums
         index_cache = None
