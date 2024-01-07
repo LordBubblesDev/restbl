@@ -18,10 +18,11 @@ Here is what each options are for at the top:
 - Use checksums: this will check if a file is vanilla or edited, in order to avoid calculating new values for unedited files (enabled by default)
 - Verbose: this will display all modded files detected in the command prompt (makes the tool slower, disabled by default)
 - Version: this is the version of the game to generate a resource table for (this should be the version you use)
+- Patch existing RESTBL: check this if you want to patch an existing resource table rather than generate a new one 
 
 The GUI is separated in 4 sections, depending on which action you would like to perform:
 
-![Screenshot](https://raw.githubusercontent.com/MasterBubbles/restbl/master/screenshots/restbl.png)
+<img src="https://raw.githubusercontent.com/MasterBubbles/restbl/master/screenshots/restbl.png" width="50%" height="50%">
 
 ### Calculate RESTBL from Mod(s)
 This section is probably the only one you are interested in. It's very simple and straight forward, you need to select the path to a folder containing one or multiple mods. This should be a path so that one or multiple folders like `[selected_path]/[mod_name]/romfs` exists (like your mod folder for Ryujinx or Yuzu).
@@ -45,6 +46,9 @@ This section is needed only if you want to generate a changelog containing the l
 
 ### Apply patches
 This section is useful if you want to apply all JSON, RCL and YAML patches in a folder to a selected RESTBL file.
+
+### Calculate RESTBL from Single Mod
+This will generate a resource table for a single mod (select the folder containing `romfs`). It will automatically be generated in the mod's folder under `romfs/System/Resource`.
 <br><br>
 
 ## CLI Usage
@@ -91,30 +95,47 @@ This option will apply all JSON, RCL and YAML patches in a folder to the selecte
 > restbl.exe -a apply-patches  -c -p "C:\path\to\file\ResourceSizeTable.Product.121.rsizetable.zs" -pp "C:\path\to\folder\containing\json_rcl_yaml_patches"
 
 
+### single-mod
+This mode will analyze the provided mod directory and automatically generate an edited RESTBL file.
+
+When using this mode, the resource table will automatically be generated within the mod's folder under `romfs/System/Resource`
+
+It uses the exact same arguments as `merge-mods`, except that `--mod-path` requires the path to a single mod containing a `romfs` folder
+
+> restbl.exe --action single-mod --use-checksums --compress --mod-path "C:\Users\username\AppData\Roaming\Ryujinx\mods\contents\0100f2c0115b6000\ModName"
+
+> restbl.exe -a merge-mods  -cs -c -m "C:\Users\username\AppData\Roaming\Ryujinx\mods\contents\0100f2c0115b6000\ModName"
+
+
 ## CLI Help
 ```
 RESTBL Tool
 
+usage: restbl.exe [-h] -a {action} [-c] [-v] [-cs] [-m MOD_PATH] [-r RESTBL_PATH] [-ver VERSION]
+                  [-u] [-d] [-r0 RESTBL_PATH0] [-r1 RESTBL_PATH1] [-l LOG_RESTBL_PATH]
+                  [-f {json,rcl,yaml}] [-p PATCH_RESTBL] [-pp PATCHES_PATH]
+
+RESTBL Tool
+
 options:
   -h, --help            show this help message and exit
-  -a {merge-mods,merge-restbl,generate-changelog,apply-patches},
-  --action {merge-mods,merge-restbl,generate-changelog,apply-patches}
+  -a, --action {merge-mods,merge-restbl,generate-changelog,apply-patches,single-mod}
                         Action to perform
   -c, --compress        Compress the output
   -v, --verbose         Print the list of edited files from mods
-
-merge-mods:
+  -cs, --use-checksums  [Recommended] Use checksums
   -m MOD_PATH, --mod-path MOD_PATH
-                        (Mandatory) Path to the mod directory
+                        Mandatory for actions "merge-mods" and "single-mod"
+  -r RESTBL_PATH, --restbl-path RESTBL_PATH
+                        (Optional) Path to a RESTBL file to patch when calculating entries for mods
   -ver VERSION, --version VERSION
                         (Optional) TotK version - default: 121
+
+merge-mods:
   -u, --use-existing-restbl
                         (Optional) Use existing RESTBL
-  -r RESTBL_PATH, --restbl-path RESTBL_PATH
-                        (Optional) Path to the RESTBL file to use
-  -del, --delete-existing-restbl
+  -d, --delete-existing-restbl
                         (Optional) Delete existing RESTBL
-  -cs, --use-checksums  [Recommended] Use checksums
 
 merge-restbl:
   -r0 RESTBL_PATH0, --restbl-path0 RESTBL_PATH0
