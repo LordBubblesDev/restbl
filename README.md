@@ -1,5 +1,5 @@
 # RESTBL  [![Downloads](https://img.shields.io/github/downloads/MasterBubbles/restbl/total)](https://github.com/MasterBubbles/restbl/releases)
-RESTBL is a simple rewrite of [dt12345's tool](https://github.com/dt-12345/totktools/blob/master/dist/RESTBL%20Tool.md) to work with command-line arguments as well as including an improved GUI.
+RESTBL is a simple rewrite of [dt12345's tool](https://github.com/dt-12345/totktools/blob/master/dist/RESTBL%20Tool.md) to work with command-line arguments, it also includes a more user-friendly GUI.
 
 This is a tool for working with and merging RESTBL files in *Tears of the Kingdom*. RESTBL files are used by the game's resource system to decide how much memory it should allocate for each file. Each entry in a RESTBL file contains a CRC32 hash of the corresponding file's path and its allocation size. The allocated size as listed in the RESTBL is not exactly equal to the size of the file, it is slightly larger.
 
@@ -22,9 +22,9 @@ Here is what each options are for at the top:
 
 The GUI is separated in 4 sections, depending on which action you would like to perform:
 
-<img src="https://raw.githubusercontent.com/MasterBubbles/restbl/master/screenshots/restbl.png" width="50%" height="50%">
+<img src="https://raw.githubusercontent.com/MasterBubbles/restbl/master/screenshots/restbl.png">
 
-### Calculate RESTBL from Mod(s)
+### Calculate RESTBL from Multiple Mods
 This section is probably the only one you are interested in. It's very simple and straight forward, you need to select the path to a folder containing one or multiple mods. This should be a path so that one or multiple folders like `[selected_path]/[mod_name]/romfs` exists (like your mod folder for Ryujinx or Yuzu).
 
 **Example:**
@@ -38,6 +38,11 @@ This section is probably the only one you are interested in. It's very simple an
         └── romfs
 ```
 
+### Calculate RESTBL from Single Mod
+This will generate a resource table for a single mod (select the folder containing `romfs`). It will automatically be generated in the mod's folder under `romfs/System/Resource`.
+If you play on switch, I would recommend using this mode while selecting the following path on your SD card:
+`SD:/atmosphere/content/0100F2C0115B6000`
+
 ### Merge RESTBLs
 This section is for merging 2 resource tables. You can use 2 different versions, the version from file 1 will be used for the output file.
 
@@ -46,15 +51,12 @@ This section is needed only if you want to generate a changelog containing the l
 
 ### Apply patches
 This section is useful if you want to apply all JSON, RCL and YAML patches in a folder to a selected RESTBL file.
-
-### Calculate RESTBL from Single Mod
-This will generate a resource table for a single mod (select the folder containing `romfs`). It will automatically be generated in the mod's folder under `romfs/System/Resource`.
 <br><br>
 
 ## CLI Usage
 To use the tool, simply run `restbl.exe` from the command line using `restbl -h` to get all available options. There are four options to choose from: merge-mods, merge-restbl, generate-changelog, apply-patches
 
-### merge-mods
+### - merge-mods
 This option will analyze the provided mod directories and automatically generate an edited RESTBL file.
 
 Using the `--compress` option will compress the generated RESTBL file with Zstd compression.
@@ -70,6 +72,19 @@ When using `merge-mods`, the argument `--mod-path C:\Path\to\mods` is required. 
 > restbl.exe --action merge-mods --use-checksums --compress --mod-path "C:\Users\username\AppData\Roaming\Ryujinx\mods\contents\0100f2c0115b6000" --version 120
 
 > restbl.exe -a merge-mods  -cs -c -m "C:\Users\username\AppData\Roaming\Ryujinx\mods\contents\0100f2c0115b6000" -ver 120
+
+
+### - single-mod
+This mode will analyze the provided mod directory and automatically generate an edited RESTBL file.
+
+When using this mode, the resource table will automatically be generated within the mod's folder under `romfs/System/Resource`
+
+It uses the exact same arguments as `merge-mods`, except that `--mod-path` requires the path to a single mod containing a `romfs` folder
+
+> restbl.exe --action single-mod --use-checksums --compress --mod-path "C:\Users\username\AppData\Roaming\Ryujinx\mods\contents\0100f2c0115b6000\ModName" --version 112
+
+> restbl.exe -a merge-mods  -cs -c -m "C:\Users\username\AppData\Roaming\Ryujinx\mods\contents\0100f2c0115b6000\ModName" -ver 112
+
 
 ### - merge-restbl
 This option will create a merged RESTBL file from the two provided RESTBL files. Similar to the previous option, using `--compress` will compress the generated RESTBL file with Zstd compression.
@@ -93,18 +108,6 @@ This option will apply all JSON, RCL and YAML patches in a folder to the selecte
 > restbl.exe --action apply-patches  --compress --patch-restbl "C:\path\to\file\ResourceSizeTable.Product.121.rsizetable.zs" --patches-path "C:\path\to\folder\containing\json_rcl_yaml_patches"
 
 > restbl.exe -a apply-patches  -c -p "C:\path\to\file\ResourceSizeTable.Product.121.rsizetable.zs" -pp "C:\path\to\folder\containing\json_rcl_yaml_patches"
-
-
-### single-mod
-This mode will analyze the provided mod directory and automatically generate an edited RESTBL file.
-
-When using this mode, the resource table will automatically be generated within the mod's folder under `romfs/System/Resource`
-
-It uses the exact same arguments as `merge-mods`, except that `--mod-path` requires the path to a single mod containing a `romfs` folder
-
-> restbl.exe --action single-mod --use-checksums --compress --mod-path "C:\Users\username\AppData\Roaming\Ryujinx\mods\contents\0100f2c0115b6000\ModName" --version 112
-
-> restbl.exe -a merge-mods  -cs -c -m "C:\Users\username\AppData\Roaming\Ryujinx\mods\contents\0100f2c0115b6000\ModName" -ver 112
 
 
 ## CLI Help
