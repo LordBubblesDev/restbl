@@ -889,6 +889,7 @@ def GenerateRestblFromSingleMod(mod_path, restbl_path='', version=121, compresse
             directory = os.path.join(mod_path, "romfs", "System", "Resource")
             os.makedirs(directory, exist_ok=True)
             filename = os.path.join(directory, 'ResourceSizeTable.Product.' + str(version).replace('.', '') + '.rsizetable')
+            filename = filename.replace("/", "\\")
             with open(filename, 'wb') as file:
                 buffer = WriteStream(file)
                 buffer.write("RESTBL".encode('utf-8'))
@@ -916,11 +917,12 @@ def GenerateRestblFromSingleMod(mod_path, restbl_path='', version=121, compresse
             with open(restbl.filename + '.zs', 'wb') as file:
                 compressor = zs.ZstdCompressor()
                 file.write(compressor.compress(data))
+            filename = filename + ".zs"
         print("Finished")
         end_time = time.time()
         execution_time = end_time - start_time
         print(f"All calculations were executed in {execution_time} seconds")
-        print("RESTBL saved at:", restbl.filename)
+        print("RESTBL saved at:", filename)
     finally:
         global index_cache, checksums
         index_cache = None
@@ -955,11 +957,20 @@ def open_tool():
                     [sg.Text(' ', size=(6, 1)),  # Empty text element to create offset
                     sg.Checkbox(default=False, text='Patch existing RESTBL', key='patch_existing', size=(20, 1))]
                 ], size=(510, 90))],
-                [sg.Frame('Calculate RESTBL from Mod(s)', [
+                [sg.Frame('Calculate RESTBL from Multiple Mods', [
                     [sg.Column([
                         [sg.Text('Mod Path:', size=(14, 1)), sg.Input(key='mod_path', size=(44, 1)), sg.FolderBrowse()],
                         [sg.Text('', size=(1, 1)),
                         sg.Button('Calculate RESTBL', size=(14, 1)),
+                        sg.Text('', size=(1, 1))
+                        ]
+                    ], size=(510, 70), element_justification='center')]
+                ])],
+                [sg.Frame('Calculate RESTBL from Single Mod', [
+                    [sg.Column([
+                        [sg.Text('Mod Path:', size=(14, 1)), sg.Input(key='single_mod_path', size=(44, 1)), sg.FolderBrowse()],
+                        [sg.Text('', size=(1, 1)),
+                        sg.Button('Calculate (single mod)', size=(20, 1)),
                         sg.Text('', size=(1, 1))
                         ]
                     ], size=(510, 70), element_justification='center')]
@@ -993,15 +1004,6 @@ def open_tool():
                         sg.Text('', size=(1, 1))
                         ]
                     ], size=(510, 97), element_justification='center')]
-                ])],
-                [sg.Frame('Calculate RESTBL from Single Mod', [
-                    [sg.Column([
-                        [sg.Text('Mod Path:', size=(14, 1)), sg.Input(key='single_mod_path', size=(44, 1)), sg.FolderBrowse()],
-                        [sg.Text('', size=(1, 1)),
-                        sg.Button('Calculate (single mod)', size=(20, 1)),
-                        sg.Text('', size=(1, 1))
-                        ]
-                    ], size=(510, 70), element_justification='center')]
                 ])],
                 [sg.Button('Exit')]
             ])
@@ -1054,6 +1056,9 @@ def open_tool():
                 window.read(timeout=0)
                 popup.bring_to_front()
                 changelog0, changelog1, restbl = merge_restbl(restbl_path0, restbl_path1)
+                filename = os.path.basename(restbl.filename)
+                restbl.filename = os.path.join(os.getcwd(), filename)
+                print(restbl.filename)
                 print("Calculating merged changelog...")
                 changelog = MergeChangelogs([changelog0, changelog1])
                 print("Applying changes...")
