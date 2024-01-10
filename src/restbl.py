@@ -616,7 +616,7 @@ def CalcSize(file, data=None):
         file = os.path.splitext(file)[0]
         file_extension = os.path.splitext(file)[1]
     if file_extension in ['.mc']:
-        size = round((os.path.getsize(file)) * 2.3) # MC decompressor wasn't working so this is an estimate of the decompressed size
+        size = round((os.path.getsize(file)) * 2.5) # MC decompressor wasn't working so this is an estimate of the decompressed size
         file = os.path.splitext(file)[0]
         file_extension = os.path.splitext(file)[1]
     # Round up to the nearest 0x20 bytes
