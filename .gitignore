@@ -10,3 +10,5 @@ test.json
 *.zs
 *.bat
 restbl.spec
+test.*
+bfres*.*

@@ -616,9 +616,14 @@ def CalcSize(file, data=None):
         file = os.path.splitext(file)[0]
         file_extension = os.path.splitext(file)[1]
     if file_extension in ['.mc']:
-        size = round((os.path.getsize(file)) * 3.3) # MC decompressor wasn't working so this is an estimate of the decompressed size
-        file = os.path.splitext(file)[0]
-        file_extension = os.path.splitext(file)[1]
+        with open(file, 'rb') as reader:
+            reader.read(4)
+            reader.read(4)
+            flags, = struct.unpack('<i', reader.read(4))
+            decompressed_size = (flags >> 5) << (flags & 0xf)
+            size = round((decompressed_size * 1.2 + 12000) * 1.7) # This is an estimate of the entry for .bfres.mc
+            file = os.path.splitext(file)[0]
+            file_extension = os.path.splitext(file)[1]
     # Round up to the nearest 0x20 bytes
     size = ((size + 0x1F) // 0x20) * 0x20
     if file.endswith('.ta.zs'):
