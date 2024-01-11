@@ -621,7 +621,7 @@ def CalcSize(file, data=None):
             reader.read(4)
             flags, = struct.unpack('<i', reader.read(4))
             decompressed_size = (flags >> 5) << (flags & 0xf)
-            size = round((decompressed_size * 1.2 + 12000) * 1.7) # This is an estimate of the entry for .bfres.mc
+            size = round((decompressed_size * 1.05 + 4096) * 3.6) # This is an estimate of the entry for .bfres.mc
             file = os.path.splitext(file)[0]
             file_extension = os.path.splitext(file)[1]
     # Round up to the nearest 0x20 bytes
