@@ -41,7 +41,7 @@ def get_app_data_path():
     if os.name == 'nt':  # Windows
         return os.environ.get('LOCALAPPDATA')
     else:  # Linux and macOS
-        return os.path.join(os.path.expanduser('~'), '.local', 'share')
+        return os.environ.get('XDG_DATA_HOME', os.path.join(os.path.expanduser('~'), '.local', 'share'))
 
 def check_config():
     app_data_path = get_app_data_path()
@@ -547,6 +547,8 @@ def GetInfoWithChecksum(romfs_path, verbose=False):
                 filepath = filepath.replace('\\', '/')
                 if os.path.splitext(filepath)[1] in ['.zs', '.zstd']:
                     data = zs.Decompress(full_path, no_output=True)
+                    if data is None:
+                        continue
                     checksum = xxhash.xxh64_intdigest(data)
                     stored_checksum = get_checksum(filepath, checksum)
                     if not file.endswith('.ta.zs'):
@@ -752,7 +754,7 @@ def CalcSize(file, data=None):
             size += 3840
 
     else:
-        size = (size + 5000) * 3
+        size = (size + 1500) * 4
 
     return size
 

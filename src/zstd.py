@@ -8,7 +8,7 @@ def get_app_data_path():
     if os.name == 'nt':  # Windows
         return os.environ.get('LOCALAPPDATA')
     else:  # Linux and macOS
-        return os.path.join(os.path.expanduser('~'), '.local', 'share')
+        return os.environ.get('XDG_DATA_HOME', os.path.join(os.path.expanduser('~'), '.local', 'share'))
 
 app_data_path = get_app_data_path()
 config_path = os.path.join(app_data_path, 'TotK', 'config.json')
@@ -66,10 +66,15 @@ class Zstd:
             filepath = os.path.splitext(filepath)[0]
         else:
             return
+        try:
+            decompressed_data = self.decompressor.decompress(data)
+        except zs.ZstdError as e:
+            print(f"Error decompressing file {filepath}: {e}")
+            return None
         if not(no_output):
             with open(os.path.join(output_dir, os.path.basename(filepath)), 'wb') as file:
-                file.write(self.decompressor.decompress(data))
-        return self.decompressor.decompress(data)
+                file.write(decompressed_data)
+        return decompressed_data
 
     # Decompresses a file or directory
     def Decompress(self, filepath, output_dir='', with_dict=True, no_output=False):
