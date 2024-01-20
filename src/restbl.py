@@ -95,6 +95,7 @@ def check_config():
 
 check_config()
 import zstd
+DEV_MODE = False
 
 class Restbl:
     def __init__(self, filepath): # Accepts both compressed and decompressed files
@@ -752,10 +753,10 @@ def CalcSize(file, data=None):
             size += 192
         if 'static.Nin_NX_NVN.esetb.byml' in os.path.abspath(file):
             size += 3840
-
     else:
         size = (size + 1500) * 4
-
+    if DEV_MODE:
+        size = size * 1.2
     return size
 
 # Merges list of changelogs into one (doesn't accept RCL or YAML)
@@ -962,7 +963,8 @@ def open_tool():
                     sg.Checkbox(default=False, text='Verbose', size=(8,5), key='verbose'),
                     sg.Text('Version:'), sg.Combo(list(version_map.keys()), default_value='1.2.1', key='version', readonly=True)],
                     [sg.Text(' ', size=(6, 1)),  # Empty text element to create offset
-                    sg.Checkbox(default=False, text='Patch existing RESTBL', key='patch_existing', size=(20, 1))]
+                    sg.Checkbox(default=False, text='Patch existing RESTBL', key='patch_existing', size=(20, 1)),
+                    sg.Checkbox('Dev Mode', default=False, key='dev_mode')]
                 ], size=(510, 90))],
                 [sg.Frame('Calculate RESTBL from Multiple Mods', [
                     [sg.Column([
@@ -1034,6 +1036,7 @@ def open_tool():
             import gc
             import threading
             mod_path = values['mod_path']
+            DEV_MODE = values['dev_mode']
             if not os.path.isdir(mod_path):
                 sg.Popup('Please enter a correct mod folder path.', title='Error')
             else:
@@ -1115,6 +1118,7 @@ def open_tool():
         elif event == 'Calculate (single mod)':
             import gc
             import threading
+            DEV_MODE = values['dev_mode']
             mod_path = values['single_mod_path']
             if not os.path.isdir(mod_path):
                 sg.Popup('Please enter a correct mod folder path.', title='Error')
@@ -1140,6 +1144,7 @@ if __name__ == "__main__":
         parser.add_argument('-a', '--action', choices=['merge-mods', 'merge-restbl', 'generate-changelog', 'apply-patches', 'single-mod'], required=True, help='Action to perform')
         parser.add_argument('-c', '--compress', action='store_true', help='Compress the output')
         parser.add_argument('-v', '--verbose', action='store_true', help='Print the list of edited files from mods')
+        parser.add_argument('-dev', '--dev-mode', action='store_true', help='Multiply the calculated sizes by a factor of 1.2 for testing')
         parser.add_argument('-cs', '--use-checksums', action='store_true', help='[Recommended] Use checksums')
         parser.add_argument('-m', '--mod-path', type=str, help='Mandatory for actions "merge-mods" and "single-mod"')
         parser.add_argument('-r', '--restbl-path', type=str, help='(Optional) Path to a RESTBL file to patch when calculating entries for mods')
@@ -1166,6 +1171,7 @@ if __name__ == "__main__":
         apply_patches_group.add_argument('-pp', '--patches-path', type=str, help='(Mandatory) Path to the folder containing patches (rcl, yaml, json)')
 
         args = parser.parse_args()
+        DEV_MODE = args.dev_mode
 
         if args.action == 'merge-mods':
             if args.restbl_path is None:
