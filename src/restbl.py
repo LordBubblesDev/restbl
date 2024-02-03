@@ -87,7 +87,7 @@ def check_config():
     # If checksums.bin doesn't exist, download it
     if not os.path.exists(checksum_bin):
         import requests
-        url = "https://github.com/MasterBubbles/restbl-cli/raw/master/checksums.bin"
+        url = "https://github.com/MasterBubbles/restbl/raw/master/checksums.bin"
         print("Checksums are missing, downloading them from: " + url)
         response = requests.get(url)
         with open(checksum_bin, 'wb') as f:
@@ -609,8 +609,6 @@ def CalcSize(file, data=None):
         with open(file, 'rb') as f:
             data = f.read()
     size = len(data)
-    if DEV_MODE:
-        size = round(size * 1.2)
     zs = zstd.Zstd()
     file_extension = os.path.splitext(file)[1]
     if file_extension in ['.zs', '.zstd'] and not file.endswith('.ta.zs'):
@@ -755,6 +753,8 @@ def CalcSize(file, data=None):
             size += 3840
     else:
         size = (size + 1500) * 4
+    if DEV_MODE:
+        size = round(size * 1.2)
     return size
 
 # Merges list of changelogs into one (doesn't accept RCL or YAML)
