@@ -3,6 +3,7 @@ test/
 patches/
 build/
 dist/
+dic/
 *.pyc
 changelog.json
 hashtable.json

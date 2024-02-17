@@ -13,6 +13,7 @@ import json
 import sys
 import argparse
 import time
+import zstd
 
 def welcome():
     return """
@@ -43,59 +44,9 @@ def get_app_data_path():
     else:  # Linux and macOS
         return os.environ.get('XDG_DATA_HOME', os.path.join(os.path.expanduser('~'), '.local', 'share'))
 
-def check_config():
-    app_data_path = get_app_data_path()
-    config_path = os.path.join(app_data_path, 'TotK')
-    config_json_path = os.path.join(config_path, 'config.json')
-    checksum_bin = os.path.join(config_path, 'checksums.bin')
-    os.makedirs(config_path, exist_ok=True)
-    # Check if config.json exists
-    if not os.path.exists(config_json_path):
-        while True:
-            # Prompt the user for the RomFS Dump Path
-            game_path = input("Please enter the path to a RomFS Dump: ")
-
-            # Check for the existence of Pack\ZsDic.pack.zs
-            zs_dic_path = os.path.join(game_path, 'Pack', 'ZsDic.pack.zs')
-            if os.path.exists(zs_dic_path):
-                break  # Exit the loop if the path is valid
-            else:
-                print(
-                      "\nOops! It seems like the magical ink in our quill has run dry, and\n"
-                      "the enchanted parchment is refusing to accept your game dump.\n\n"
-                      "Remember, even magical commands require the 'Pack/ZsDic.pack.zs' file\n"
-                      "and a sprinkle of pixie dust to work properly.\n\n"
-                      "Please make sure you're using a wand-compatible keyboard and try\n"
-                      "casting the spell again with the correct incantations. If problems\n"
-                      "persist, consult the nearest wise wizard for debugging assistance.\n")
-
-        # Create the config.json file
-        with open(config_json_path, 'w') as f:
-            json.dump({"GamePath": game_path}, f)
-    else:
-        # Load the config.json file
-        with open(config_json_path, 'r') as f:
-            config = json.load(f)
-
-        # Check for the existence of Pack\ZsDic.pack.zs
-        game_path = config["GamePath"]
-        zs_dic_path = os.path.join(game_path, 'Pack', 'ZsDic.pack.zs')
-        if not os.path.exists(zs_dic_path):
-            print("Invalid game dump, missing ZsDic.pack.zs")
-            sys.exit()
-
-    # If checksums.bin doesn't exist, download it
-    if not os.path.exists(checksum_bin):
-        import requests
-        url = "https://github.com/MasterBubbles/restbl/raw/master/checksums.bin"
-        print("Checksums are missing, downloading them from: " + url)
-        response = requests.get(url)
-        with open(checksum_bin, 'wb') as f:
-            f.write(response.content)
-
-check_config()
-import zstd
+app_data_path = get_app_data_path()
 DEV_MODE = False
+version = None
 
 class Restbl:
     def __init__(self, filepath): # Accepts both compressed and decompressed files
@@ -479,18 +430,27 @@ def GetFileLists(mod_path):
 
 # Same as above but stores the estimated entry size as well
 def GetInfo(romfs_path, verbose=False):
-    info = {}
+    global version
+    version_str = str(version)
     zs = zstd.Zstd()
-    for dir,subdir,files in os.walk(romfs_path):
+    info = {}
+    for dirpath, subdir, files in os.walk(romfs_path):
         for file in files:
-            full_path = os.path.join(dir, file)
+            full_path = os.path.join(dirpath, file)
             filepath = full_path
             if os.path.isfile(filepath):
-                filepath = os.path.join(os.path.relpath(dir, romfs_path), os.path.basename(filepath))
+                filepath = os.path.join(os.path.relpath(dirpath, romfs_path), os.path.basename(filepath)).replace('\\', '/')
+                # Check if the file is inside the RSDB folder and if it does not contain the version string
+            if 'RSDB' in dir and file.endswith('.rstbl.byml.zs'):
+                # Extract the version part of the filename
+                file_version = file.split('.')[-4]  # Assuming the format is always like "Product.120.rstbl.byml"
+                if file_version != version_str:
+                    if verbose:
+                        print(f"Ignoring {file} as its version {file_version} does not match the selected version {version_str}.")
+                    continue  # Skip this file
                 if os.path.splitext(filepath)[1] in ['.zs', '.zstd', '.mc'] and not file.endswith('.ta.zs'):
                     filepath = os.path.splitext(filepath)[0]
                 if os.path.splitext(filepath)[1] not in ['.bwav', '.rsizetable', '.rcl', '.webm'] and os.path.splitext(filepath)[0] != r"Pack\ZsDic":
-                    filepath = filepath.replace('\\', '/')
                     info[filepath] = CalcSize(full_path)
                     if verbose:
                         print(filepath)
@@ -537,12 +497,21 @@ def get_checksum(path, filechecksum):
 
 # Same as GetInfo but does a checksum comparison first to see if the file has been modified
 def GetInfoWithChecksum(romfs_path, verbose=False):
+    global version
+    version_str = str(version)
     info = {}
     zs = zstd.Zstd()
     for dir,subdir,files in os.walk(romfs_path):
         for file in files:
             full_path = os.path.join(dir, file)
             filepath = full_path
+            if 'RSDB' in dir and file.endswith('.rstbl.byml.zs'):
+                # Extract the version part of the filename
+                file_version = file.split('.')[-4]  # Assuming the format is always like "Product.120.rstbl.byml"
+                if file_version != version_str:
+                    if verbose:
+                        print(f"Ignoring {file} as its version {file_version} does not match the selected version {version_str}.")
+                    continue  # Skip this file
             if os.path.isfile(filepath):
                 filepath = os.path.join(os.path.relpath(dir, romfs_path), os.path.basename(filepath))
                 filepath = filepath.replace('\\', '/')
@@ -622,7 +591,7 @@ def CalcSize(file, data=None):
             reader.read(4)
             flags, = struct.unpack('<i', reader.read(4))
             decompressed_size = (flags >> 5) << (flags & 0xf)
-            size = round((decompressed_size * 1.05 + 4096) * 3.6) # This is an estimate of the entry for .bfres.mc
+            size = round((decompressed_size * 1.05 + 4096) * 4) # This is an estimate of the entry for .bfres.mc
             file = os.path.splitext(file)[0]
             file_extension = os.path.splitext(file)[1]
     # Round up to the nearest 0x20 bytes
@@ -781,9 +750,11 @@ def MergeChangelogs(changelogs):
 def MergeMods(mod_path, restbl_path='', version=121, compressed=True, delete=False, smart_analysis=True, checksum=False, verbose=False):
     try:
         start_time = time.time()
+        directory = os.path.join(mod_path, "00_MERGED_RESTBL", "romfs", "System", "Resource")
+        os.makedirs(directory, exist_ok=True)
         if not(os.path.exists(restbl_path)):
             print("Creating empty resource size table...")
-            filename = os.path.join(restbl_path, 'ResourceSizeTable.Product.' + str(version).replace('.', '') + '.rsizetable')
+            filename = os.path.join(directory, 'ResourceSizeTable.Product.' + str(version).replace('.', '') + '.rsizetable')
             with open(filename, 'wb') as file:
                 buffer = WriteStream(file)
                 buffer.write("RESTBL".encode('utf-8'))
@@ -797,7 +768,7 @@ def MergeMods(mod_path, restbl_path='', version=121, compressed=True, delete=Fal
             restbl = Restbl(restbl_path)
         print("Generating changelogs...")
         changelog = restbl.GenerateChangelogFromModDirectory(mod_path, delete, smart_analysis, checksum, verbose)
-        with open('test.json', 'w') as f:
+        with open('RestblChangelog.json', 'w') as f:
             json.dump(changelog, f, indent=4)
         print("Applying changes...")
         restbl.ApplyChangelog(changelog)
@@ -909,7 +880,7 @@ def GenerateRestblFromSingleMod(mod_path, restbl_path='', version=121, compresse
             restbl = Restbl(restbl_path)
         print("Generating changelog...")
         changelog = restbl.GenerateChangelogFromMod(mod_path, checksum, verbose)
-        with open('test.json', 'w') as f:
+        with open('RestblChangelog.json', 'w') as f:
             json.dump(changelog, f, indent=4)
         print("Applying changes...")
         restbl.ApplyChangelog(changelog)
@@ -940,6 +911,7 @@ def open_tool():
     print(welcome())
     import PySimpleGUI as sg
     global DEV_MODE
+    global version
     sg.theme('Black')
     version_map = {
         '1.0.0': 100,
