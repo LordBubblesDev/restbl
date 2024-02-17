@@ -1143,13 +1143,14 @@ if __name__ == "__main__":
 
         args = parser.parse_args()
         DEV_MODE = args.dev_mode
+        version = args.version
 
         if args.action == 'merge-mods':
             if args.restbl_path is None:
                 restbl_path = ''  # Set restbl_path to an empty string if it's not provided
             else:
                 restbl_path = args.restbl_path
-            MergeMods(args.mod_path, restbl_path, args.version, args.compress, args.delete_existing_restbl, args.use_existing_restbl, args.use_checksums, args.verbose)
+            MergeMods(args.mod_path, restbl_path, version, args.compress, args.delete_existing_restbl, args.use_existing_restbl, args.use_checksums, args.verbose)
         elif args.action == 'merge-restbl':
             # Replace the file browsing dialog with command line arguments
             restbl_path0 = args.restbl_path0
@@ -1181,7 +1182,7 @@ if __name__ == "__main__":
                 restbl_path = ''  # Set restbl_path to an empty string if it's not provided
             else:
                 restbl_path = args.restbl_path
-            GenerateRestblFromSingleMod(args.mod_path, restbl_path, args.version, args.compress, args.use_checksums, args.verbose)
+            GenerateRestblFromSingleMod(args.mod_path, restbl_path, version, args.compress, args.use_checksums, args.verbose)
     else:
         # No command-line arguments were passed
         open_tool()
