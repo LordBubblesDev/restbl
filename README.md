@@ -38,6 +38,8 @@ This section is probably the only one you are interested in. It's very simple an
         └── romfs
 ```
 
+The generated resource table file will be saved in your mod folder under `00_MERGED_RESTBL\romfs\System\Resource`
+
 ### Calculate RESTBL from Single Mod
 This will generate a resource table for a single mod (select the folder containing `romfs`). It will automatically be generated in the mod's folder under `romfs/System/Resource`.
 If you play on switch, I would recommend using this mode while selecting the following path on your SD card:
@@ -57,7 +59,7 @@ This section is useful if you want to apply all JSON, RCL and YAML patches in a 
 To use the tool, simply run `restbl.exe` from the command line using `restbl -h` to get all available options. There are four options to choose from: merge-mods, merge-restbl, generate-changelog, apply-patches
 
 ### - merge-mods
-This option will analyze the provided mod directories and automatically generate an edited RESTBL file.
+This option will analyze the provided mod directories and automatically generate an edited RESTBL file in a new mod called 00_MERGED_RESTBL.
 
 Using the `--compress` option will compress the generated RESTBL file with Zstd compression.
 
