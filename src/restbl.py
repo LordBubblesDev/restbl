@@ -17,16 +17,16 @@ import zstd
 
 def welcome():
     return """
-             / \\\\
-            /   \\\\
-           /_____\\\\
-          /\\\\    /\\\\
-         /  \\\\  /  \\\\
-        /____\\\\/____\\\\
-    ________________________
+              / \\\\
+             /   \\\\
+            /_____\\\\
+           /\\\\    /\\\\
+          /  \\\\  /  \\\\
+         /____\\\\/____\\\\
+   __________________________
 
-      - TotK RESTBL tool -
-    ________________________
+   - TotK RESTBL Calculator -
+   __________________________
 """
 
 # For pyinstaller relative paths
@@ -989,7 +989,7 @@ def open_tool():
             ])
         ]
     ]
-    window = sg.Window('RESTBL Tool', icon=images).Layout(layout)
+    window = sg.Window('RESTBL Calculator 1.4.0', icon=images).Layout(layout)
     while True:
         event, values = window.read()
         if event == sg.WINDOW_CLOSED or event == 'Exit':
