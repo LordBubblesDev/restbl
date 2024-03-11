@@ -457,30 +457,30 @@ def GetInfo(romfs_path, verbose=False):
             if os.path.isfile(filepath):
                 filepath = os.path.join(os.path.relpath(dirpath, romfs_path), os.path.basename(filepath)).replace('\\', '/')
                 # Check if the file is inside the RSDB folder and if it does not contain the version string
-            if 'RSDB' in dir and file.endswith('.rstbl.byml.zs'):
+            if 'RSDB' in dirpath and file.endswith('.rstbl.byml.zs'):
                 # Extract the version part of the filename
                 file_version = file.split('.')[-4]  # Assuming the format is always like "Product.120.rstbl.byml"
                 if file_version != version_str:
                     if verbose:
                         print(f"Ignoring {file} as its version {file_version} does not match the selected version {version_str}.")
                     continue  # Skip this file
-                if os.path.splitext(filepath)[1] in ['.zs', '.zstd', '.mc'] and not file.endswith('.ta.zs'):
-                    filepath = os.path.splitext(filepath)[0]
-                if os.path.splitext(filepath)[1] not in ['.bwav', '.rsizetable', '.rcl', '.webm'] and os.path.splitext(filepath)[0] != r"Pack\ZsDic":
-                    info[filepath] = CalcSize(full_path)
-                    if verbose:
-                        print(filepath)
-                    if os.path.splitext(filepath)[1] == '.pack':
-                        archive = sarc.Sarc(zs.Decompress(full_path, no_output=True))
-                        archive_info = archive.files
-                        for f in archive_info:
-                            size = CalcSize(f["Name"], data=f["Data"])
-                            if verbose:
-                                print(f["Name"])
-                            if f["Name"] not in info:
-                                info[f["Name"]] = size
-                            else:
-                                info[f["Name"]] = max(info[f["Name"]], size)
+            if os.path.splitext(filepath)[1] in ['.zs', '.zstd', '.mc'] and not file.endswith('.ta.zs'):
+                filepath = os.path.splitext(filepath)[0]
+            if os.path.splitext(filepath)[1] not in ['.bwav', '.rsizetable', '.rcl', '.webm'] and os.path.splitext(filepath)[0] != r"Pack\ZsDic":
+                info[filepath] = CalcSize(full_path)
+                if verbose:
+                    print(filepath)
+                if os.path.splitext(filepath)[1] == '.pack':
+                    archive = sarc.Sarc(zs.Decompress(full_path, no_output=True))
+                    archive_info = archive.files
+                    for f in archive_info:
+                        size = CalcSize(f["Name"], data=f["Data"])
+                        if verbose:
+                            print(f["Name"])
+                        if f["Name"] not in info:
+                            info[f["Name"]] = size
+                        else:
+                            info[f["Name"]] = max(info[f["Name"]], size)
     info = dict(sorted(info.items()))
     return info
 
