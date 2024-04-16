@@ -631,8 +631,6 @@ def CalcSize(file, data=None):
     
     # Add specific size differences for each file type
     size_diff_map = {
-        '.bgyml': 0,  # handled separately above
-        '.mc': 0,  # handled separately above
         '.ainb': 392,  # + exb allocations, handled separately below
         '.asb': 552,  # +40 per node, handled separately below
         '.baatarc': 256,
@@ -645,6 +643,7 @@ def CalcSize(file, data=None):
         '.bfarc': 256,
         '.bfevfl': 288,  # one exception: Event/EventFlow/Dm_ED_0004.bfevfl is 480
         '.bfsha': 256,
+        '.bgyml': 0,  # handled separately above
         '.bhtmp': 256,
         '.blal': 256,
         '.blarc': 256,
@@ -666,13 +665,14 @@ def CalcSize(file, data=None):
         '.dpi': 256,
         '.genvb': 384,
         '.jpg': 256,
+        '.mc': 0,  # handled separately above
         '.pack': 384,
         '.png': 256,
         '.quad': 256,
         '.sarc': 384,
         '.tscb': 256,
-        '.txtg': 256,
         '.txt': 256,
+        '.txtg': 256,
         '.vsts': 256,
         '.wbr': 256,
         '.zs': 0  # handled separately, for .ta.zs files
