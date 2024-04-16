@@ -66,11 +66,11 @@ version = None
 
 game_file_extensions = [
     '.ainb', '.asb', '.baatarc', '.baev', '.bagst', '.bars', '.bcul', '.beco', 
-    '.belnk', '.bfarc', '.bfevfl', '.bfres', '.bfsha', '.bgyml', '.bhtmp', '.blal', 
-    '.blarc', '.blwp', '.bnsh', '.bntx', '.bphcl', '.bphhb', '.bphnm', '.bphsh', 
-    '.bslnk', '.bstar', '.byml', '.cai', '.casset.byml', '.chunk', '.crbin', 
-    '.cutinfo', '.dpi', '.genvb', '.jpg', '.mc', '.pack', '.png', '.quad', '.sarc', 
-    '.tscb', '.txt', '.txtg', '.vsts', '.wbr', '.zs'
+    '.belnk', '.bfarc', '.bfevfl', '.bfres', '.bfsha', '.bgyml', '.bhtmp', '.bkres', 
+    '.blal', '.blarc', '.blwp', '.bnsh', '.bntx', '.bphcl', '.bphhb', '.bphnm', 
+    '.bphsc', '.bphsh', '.bslnk', '.bstar', '.byml', '.cai', '.casset.byml', 
+    '.chunk', '.crbin', '.cutinfo', '.dpi', '.genvb', '.jpg', '.mc', '.pack', 
+    '.png', '.quad', '.sarc', '.tscb', '.txt', '.txtg', '.vsts', '.wbr', '.zs'
 ]
 
 class Restbl:
@@ -624,7 +624,7 @@ def CalcSize(file, data=None):
             reader.read(4)
             flags, = struct.unpack('<i', reader.read(4))
             decompressed_size = (flags >> 5) << (flags & 0xf)
-            size = round((decompressed_size * 1.05 + 4096) * 4) # This is an estimate of the entry for .bfres.mc
+            size = round((decompressed_size * 1.2 + 10000) * 4.5) # This is an estimate of the entry for .bfres.mc
             file = os.path.splitext(file)[0]
             file_extension = os.path.splitext(file)[1]
     # Round up to the nearest 0x20 bytes
@@ -632,7 +632,7 @@ def CalcSize(file, data=None):
     if file.endswith('.ta.zs'):
         size = size + 256
     if file_extension == '.bgyml':
-        size = (size + 1000) * 8
+        size = (size + 2000) * 10
 
     shader_archives = ['agl_resource.Nin_NX_NVN.release.sarc',
                         'gsys_resource.Nin_NX_NVN.release.sarc',
@@ -754,9 +754,9 @@ def CalcSize(file, data=None):
         if 'static.Nin_NX_NVN.esetb.byml' in os.path.abspath(file):
             size += 3840
     else:
-        size = (size + 1500) * 4
+        size = (size + 2000) * 6
     if DEV_MODE:
-        size = round(size * 1.2)
+        size = round(size * 1.4)
     return size
 
 # Merges list of changelogs into one (doesn't accept RCL or YAML)
