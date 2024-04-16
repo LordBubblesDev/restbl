@@ -64,6 +64,15 @@ app_data_path = get_app_data_path()
 DEV_MODE = False
 version = None
 
+game_file_extensions = [
+    '.ainb', '.asb', '.baatarc', '.baev', '.bagst', '.bars', '.bcul', '.beco', 
+    '.belnk', '.bfarc', '.bfevfl', '.bfres', '.bfsha', '.bgyml', '.bhtmp', '.blal', 
+    '.blarc', '.blwp', '.bnsh', '.bntx', '.bphcl', '.bphhb', '.bphnm', '.bphsh', 
+    '.bslnk', '.bstar', '.byml', '.cai', '.casset.byml', '.chunk', '.crbin', 
+    '.cutinfo', '.dpi', '.genvb', '.jpg', '.mc', '.pack', '.png', '.quad', '.sarc', 
+    '.tscb', '.txt', '.txtg', '.vsts', '.wbr', '.zs'
+]
+
 class Restbl:
     def __init__(self, filepath): # Accepts both compressed and decompressed files
         if os.path.splitext(filepath)[1] in ['.zs', '.zstd']:
@@ -447,11 +456,15 @@ def GetFileLists(mod_path):
 # Same as above but stores the estimated entry size as well
 def GetInfo(romfs_path, verbose=False):
     global version
+    global game_file_extensions
     version_str = str(version)
     zs = zstd.Zstd()
     info = {}
     for dirpath, subdir, files in os.walk(romfs_path):
         for file in files:
+            ext = os.path.splitext(file)[1]
+            if ext not in game_file_extensions:
+                continue
             full_path = os.path.join(dirpath, file)
             filepath = full_path
             if os.path.isfile(filepath):
@@ -514,11 +527,15 @@ def get_checksum(path, filechecksum):
 # Same as GetInfo but does a checksum comparison first to see if the file has been modified
 def GetInfoWithChecksum(romfs_path, verbose=False):
     global version
+    global game_file_extensions
     version_str = str(version)
     info = {}
     zs = zstd.Zstd()
     for dir,subdir,files in os.walk(romfs_path):
         for file in files:
+            ext = os.path.splitext(file)[1]
+            if ext not in game_file_extensions:
+                continue
             full_path = os.path.join(dir, file)
             filepath = full_path
             if 'RSDB' in dir and file.endswith('.rstbl.byml.zs'):
