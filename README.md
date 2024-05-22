@@ -6,9 +6,7 @@ This is a tool for working with and merging RESTBL files in *Tears of the Kingdo
 When developing or using mods, the RESTBL oftens becomes an issue as changes to file sizes may lead to the existing RESTBL entry becoming too small. This will result in the game crashing when it attempts to load in said resource. As a result, many mods come with edited RESTBL files, tailored for that specific mod. The issue arises when you have multiple mods all requiring RESTBL edits. This tool aims to solve that issue by automating the process without the need for external changelog files (such as YAML patches or .rcl files).
 
 ### Important notes
-When you open the tool (or run it from the command line), it will check for a config.json file in the folder `%LocalAppData%\TotK` (this is the same configuration file as [NX-Editor](https://github.com/NX-Editor), which should contain the path to a RomFS dump of the game). If that file doesn't exist, it will prompt you to enter the path to a dump, which should at least include `Pack/ZsDic.pack.zs`.
-
-Additionally, the tool requires a file called `checksums.bin` (also located in `%LocalAppData%\TotK`). If that file doesn't exist when you run the executable, it will automatically download it from [this GitHub link](https://github.com/MasterBubbles/restbl/raw/master/checksums.bin).
+The tool requires a file called `checksums.bin` (located in `%LocalAppData%\TotK`). If that file doesn't exist when you run the executable, it will automatically download it from [this GitHub link](https://github.com/MasterBubbles/restbl/raw/master/checksums.bin).
 
 ## GUI Usage
 Here is what each options are for at the top:
@@ -38,6 +36,8 @@ This section is probably the only one you are interested in. It's very simple an
         └── romfs
 ```
 
+The generated resource table file will be saved in your mod folder under `00_MERGED_RESTBL\romfs\System\Resource`
+
 ### Calculate RESTBL from Single Mod
 This will generate a resource table for a single mod (select the folder containing `romfs`). It will automatically be generated in the mod's folder under `romfs/System/Resource`.
 If you play on switch, I would recommend using this mode while selecting the following path on your SD card:
@@ -57,7 +57,7 @@ This section is useful if you want to apply all JSON, RCL and YAML patches in a 
 To use the tool, simply run `restbl.exe` from the command line using `restbl -h` to get all available options. There are four options to choose from: merge-mods, merge-restbl, generate-changelog, apply-patches
 
 ### - merge-mods
-This option will analyze the provided mod directories and automatically generate an edited RESTBL file.
+This option will analyze the provided mod directories and automatically generate an edited RESTBL file in a new mod called 00_MERGED_RESTBL.
 
 Using the `--compress` option will compress the generated RESTBL file with Zstd compression.
 
