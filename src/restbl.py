@@ -37,30 +37,6 @@ def get_correct_path(relative_path):
 
     return os.path.join(base_path, relative_path)
 
-def get_app_data_path():
-    if os.name == 'nt':  # Windows
-        return os.environ.get('LOCALAPPDATA')
-    else:  # Linux and macOS
-        return os.environ.get('XDG_DATA_HOME', os.path.join(os.path.expanduser('~'), '.local', 'share'))
-
-def check_config():
-    app_data_path = get_app_data_path()
-    config_path = os.path.join(app_data_path, 'TotK')
-    checksum_bin = os.path.join(config_path, 'checksums.bin')
-    os.makedirs(config_path, exist_ok=True)
-
-    # If checksums.bin doesn't exist, download it
-    if not os.path.exists(checksum_bin):
-        import requests
-        url = "https://github.com/MasterBubbles/restbl/raw/master/checksums.bin"
-        print("Checksums are missing, downloading them from: " + url)
-        response = requests.get(url)
-        with open(checksum_bin, 'wb') as f:
-            f.write(response.content)
-
-check_config()
-
-app_data_path = get_app_data_path()
 DEV_MODE = False
 version = None
 
@@ -514,8 +490,8 @@ index_cache = None
 def get_checksum(path, filechecksum):
     global checksums, index_cache
     if checksums is None:
-        app_data_path = get_app_data_path()
-        checksums_file_path = os.path.join(app_data_path, 'TotK', 'checksums.bin')
+        checksums_file_path = "checksums/checksums.bin"
+        checksums_file_path = get_correct_path(checksums_file_path)
 
         with open(checksums_file_path, "rb") as f:
             buffer = np.fromfile(f, dtype=np.uint64)
