@@ -39,18 +39,18 @@ class Sarc:
 
         # File header
         self.magic = self.stream.read(4).decode('utf-8')
-        assert self.magic == "SARC", f"Invalid file magic, expected 'SARC' but got '{self.magic}' in file {self.filename}"
+        assert self.magic == "SARC", f"Invalid file magic, expected 'SARC' but got '{self.magic}'"
         self.stream.read(2)
         bom = self.stream.read_u16(">")
         self.bom = "<" if bom == 65534 else ">" # < is LE, > is BE (for struct)
         self.stream.seek(-4, 1)
         self.header_size = self.stream.read_u16(self.bom)
-        assert self.header_size == 0x14, f"Invalid header size, expected 0x14 but got {hex(self.header_size)} in file {self.filename}"
+        assert self.header_size == 0x14, f"Invalid header size, expected 0x14 but but got {hex(self.header_size)}"
         self.stream.read(2)
         self.filesize = self.stream.read_u32(self.bom)
         self.data_offset = self.stream.read_u32(self.bom)
         self.version = self.stream.read_u16(self.bom)
-        assert self.version == 0x100, f"Invalid version, expected 0x100 but got {hex(self.version)} in file {self.filename}"
+        assert self.version == 0x100, f"Invalid version, expected 0x100 but got {hex(self.version)}"
         self.stream.read(2)
 
         self.stream.seek(self.data_offset)

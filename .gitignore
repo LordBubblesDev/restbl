@@ -5,11 +5,10 @@ build/
 dist/
 dic/
 *.pyc
-changelog.json
-hashtable.json
-test.json
+*.json
 *.zs
 *.bat
-restbl.spec
+*.sh
+*.spec
 test.*
 bfres*.*

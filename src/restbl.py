@@ -425,7 +425,7 @@ class Restbl:
 def GetStringList(romfs_path):
     paths = []
     zs = zstd.Zstd()
-    for dir,subdir,files in os.walk(romfs_path):
+    for dir, subdir, files in os.walk(romfs_path):
         for file in files:
             full_path = os.path.join(dir, file)
             filepath = full_path
@@ -438,8 +438,12 @@ def GetStringList(romfs_path):
                     paths.append(filepath)
                     print(filepath)
                     if os.path.splitext(filepath)[1] == '.pack':
-                        archive = sarc.Sarc(zs.Decompress(full_path, no_output=True))
-                        paths += archive.ListFiles()
+                        try:
+                            decompressed_data = zs.Decompress(full_path, no_output=True)
+                            archive = sarc.Sarc(decompressed_data, filename=filepath)
+                            paths += archive.ListFiles()
+                        except Exception as e:
+                            print(f"Failed to process file {filepath}: {str(e)}")
     paths = list(set(paths))
     paths.sort()
     return paths
@@ -484,16 +488,23 @@ def GetInfo(romfs_path, verbose=False):
                 if verbose:
                     print(filepath)
                 if os.path.splitext(filepath)[1] == '.pack':
-                    archive = sarc.Sarc(zs.Decompress(full_path, no_output=True))
-                    archive_info = archive.files
-                    for f in archive_info:
-                        size = CalcSize(f["Name"], data=f["Data"])
-                        if verbose:
-                            print(f["Name"])
-                        if f["Name"] not in info:
-                            info[f["Name"]] = size
-                        else:
-                            info[f["Name"]] = max(info[f["Name"]], size)
+                    try:
+                        decompressed_data = zs.Decompress(full_path, no_output=True)
+                        archive = sarc.Sarc(decompressed_data, filename=filepath)
+                        archive_info = archive.files
+                        for f in archive_info:
+                            try:
+                                size = CalcSize(f["Name"], data=f["Data"])
+                                if verbose:
+                                    print(f["Name"])
+                                if f["Name"] not in info:
+                                    info[f["Name"]] = size
+                                else:
+                                    info[f["Name"]] = max(info[f["Name"]], size)
+                            except Exception as e:
+                                print(f"Failed to calculate size for {f['Name']} in {filepath}: {str(e)}")
+                    except Exception as e:
+                        print(f"Failed to process pack file {filepath}: {str(e)}")
     info = dict(sorted(info.items()))
     return info
 
@@ -575,25 +586,36 @@ def GetInfoWithChecksum(romfs_path, verbose=False):
                             if verbose:  # Only print if verbose is True
                                 print(filepath)
                             if os.path.splitext(filepath)[1] == '.pack':
-                                archive = sarc.Sarc(data)
-                                archive_info = archive.files
-                                for f in archive_info:
-                                    add = False
-                                    full_path = full_path.replace("\\", "/")
-                                    full_path = full_path.split("romfs/", 1)[-1]
-                                    cs = xxhash.xxh64_intdigest(f["Data"])
-                                    path_for_checksum = (full_path + "/" + f["Name"])
-                                    stored_checksum = get_checksum(path_for_checksum, cs)
-                                    if stored_checksum == 0:
-                                        add = True
-                                    if add:
-                                        size = CalcSize(f["Name"], data=f["Data"])
-                                        if verbose:
-                                            print(f["Name"])
-                                        if f["Name"] not in info:
-                                            info[f["Name"]] = size
-                                        else:
-                                            info[f["Name"]] = max(info[f["Name"]], size)
+                                try:
+                                    archive = sarc.Sarc(data, filename=filepath)
+                                    archive_info = archive.files
+                                    for f in archive_info:
+                                        add = False
+                                        full_path = full_path.replace("\\", "/")
+                                        full_path = full_path.split("romfs/", 1)[-1]
+                                        try:
+                                            cs = xxhash.xxh64_intdigest(f["Data"])
+                                            path_for_checksum = (full_path + "/" + f["Name"])
+                                            stored_checksum = get_checksum(path_for_checksum, cs)
+                                            if stored_checksum == 0:
+                                                add = True
+                                        except Exception as e:
+                                            print(f"Failed to calculate checksum for {f['Name']} in {filepath}: {str(e)}")
+                                            continue  # Skip this file but continue with others
+
+                                        if add:
+                                            try:
+                                                size = CalcSize(f["Name"], data=f["Data"])
+                                                if verbose:
+                                                    print(f["Name"])
+                                                if f["Name"] not in info:
+                                                    info[f["Name"]] = size
+                                                else:
+                                                    info[f["Name"]] = max(info[f["Name"]], size)
+                                            except Exception as e:
+                                                print(f"Failed to calculate size for {f['Name']} in {filepath}: {str(e)}")
+                                except Exception as e:
+                                    print(f"Failed to process pack file {filepath}: {str(e)}")
     info = dict(sorted(info.items()))
     return info
 
@@ -624,7 +646,7 @@ def CalcSize(file, data=None):
             reader.read(4)
             flags, = struct.unpack('<i', reader.read(4))
             decompressed_size = (flags >> 5) << (flags & 0xf)
-            size = round((decompressed_size * 1.2 + 10000) * 4.5) # This is an estimate of the entry for .bfres.mc
+            size = round((decompressed_size * 1.15 + 4096) * 4) # This is an estimate of the entry for .bfres.mc
             file = os.path.splitext(file)[0]
             file_extension = os.path.splitext(file)[1]
     # Round up to the nearest 0x20 bytes
@@ -632,7 +654,7 @@ def CalcSize(file, data=None):
     if file.endswith('.ta.zs'):
         size = size + 256
     if file_extension == '.bgyml':
-        size = (size + 2000) * 10
+        size = (size + 2000) * 8
 
     shader_archives = ['agl_resource.Nin_NX_NVN.release.sarc',
                         'gsys_resource.Nin_NX_NVN.release.sarc',
@@ -754,9 +776,9 @@ def CalcSize(file, data=None):
         if 'static.Nin_NX_NVN.esetb.byml' in os.path.abspath(file):
             size += 3840
     else:
-        size = (size + 2000) * 6
+        size = (size + 1500) * 4
     if DEV_MODE:
-        size = round(size * 1.4)
+        size = round(size * 1.3)
     return size
 
 # Merges list of changelogs into one (doesn't accept RCL or YAML)
