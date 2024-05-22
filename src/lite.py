@@ -967,8 +967,8 @@ def open_tool():
             return
         version = version_map[version_combobox.get()]
         calculate_restbl_button.configure(text="Please wait...", fg_color="#26ac15", text_color="#4f4f4f", state="disabled"), app.update()
-        MergeMods(mod_path, restbl_to_patch, version, compress_var.get(), delete_var.get(), smart_analyze_var.get(), use_checksums_var.get(), verbose_var.get()), on_completion()
-        calculate_restbl_button.configure(text="Calculate RESTBL", fg_color="#1f6aa5", text_color="white", state="normal"), app.update()
+        MergeMods(mod_path, restbl_to_patch, version, compress_var.get(), delete_var.get(), smart_analyze_var.get(), use_checksums_var.get(), verbose_var.get())
+        calculate_restbl_button.configure(text="Calculate RESTBL", fg_color="#1f6aa5", text_color="white", state="normal"), app.update(), on_completion()
 
     app = ctk.CTk()
     app.title('RESTBL Calculator 1.4.1 Lite')
