@@ -64,6 +64,15 @@ app_data_path = get_app_data_path()
 DEV_MODE = False
 version = None
 
+game_file_extensions = [
+    '.ainb', '.asb', '.baatarc', '.baev', '.bagst', '.bars', '.bcul', '.beco', 
+    '.belnk', '.bfarc', '.bfevfl', '.bfres', '.bfsha', '.bgyml', '.bhtmp', '.bkres', 
+    '.blal', '.blarc', '.blwp', '.bnsh', '.bntx', '.bphcl', '.bphhb', '.bphnm', 
+    '.bphsc', '.bphsh', '.bslnk', '.bstar', '.byml', '.cai', '.casset.byml', 
+    '.chunk', '.crbin', '.cutinfo', '.dpi', '.genvb', '.jpg', '.mc', '.pack', 
+    '.png', '.quad', '.sarc', '.tscb', '.txt', '.txtg', '.vsts', '.wbr', '.zs'
+]
+
 class Restbl:
     def __init__(self, filepath): # Accepts both compressed and decompressed files
         if os.path.splitext(filepath)[1] in ['.zs', '.zstd']:
@@ -447,11 +456,15 @@ def GetFileLists(mod_path):
 # Same as above but stores the estimated entry size as well
 def GetInfo(romfs_path, verbose=False):
     global version
+    global game_file_extensions
     version_str = str(version)
     zs = zstd.Zstd()
     info = {}
     for dirpath, subdir, files in os.walk(romfs_path):
         for file in files:
+            ext = os.path.splitext(file)[1]
+            if ext not in game_file_extensions:
+                continue
             full_path = os.path.join(dirpath, file)
             filepath = full_path
             if os.path.isfile(filepath):
@@ -514,11 +527,15 @@ def get_checksum(path, filechecksum):
 # Same as GetInfo but does a checksum comparison first to see if the file has been modified
 def GetInfoWithChecksum(romfs_path, verbose=False):
     global version
+    global game_file_extensions
     version_str = str(version)
     info = {}
     zs = zstd.Zstd()
     for dir,subdir,files in os.walk(romfs_path):
         for file in files:
+            ext = os.path.splitext(file)[1]
+            if ext not in game_file_extensions:
+                continue
             full_path = os.path.join(dir, file)
             filepath = full_path
             if 'RSDB' in dir and file.endswith('.rstbl.byml.zs'):
@@ -607,7 +624,7 @@ def CalcSize(file, data=None):
             reader.read(4)
             flags, = struct.unpack('<i', reader.read(4))
             decompressed_size = (flags >> 5) << (flags & 0xf)
-            size = round((decompressed_size * 1.05 + 4096) * 4) # This is an estimate of the entry for .bfres.mc
+            size = round((decompressed_size * 1.2 + 10000) * 4.5) # This is an estimate of the entry for .bfres.mc
             file = os.path.splitext(file)[0]
             file_extension = os.path.splitext(file)[1]
     # Round up to the nearest 0x20 bytes
@@ -615,7 +632,7 @@ def CalcSize(file, data=None):
     if file.endswith('.ta.zs'):
         size = size + 256
     if file_extension == '.bgyml':
-        size = (size + 1000) * 8
+        size = (size + 2000) * 10
 
     shader_archives = ['agl_resource.Nin_NX_NVN.release.sarc',
                         'gsys_resource.Nin_NX_NVN.release.sarc',
@@ -631,8 +648,6 @@ def CalcSize(file, data=None):
     
     # Add specific size differences for each file type
     size_diff_map = {
-        '.bgyml': 0,  # handled separately above
-        '.mc': 0,  # handled separately above
         '.ainb': 392,  # + exb allocations, handled separately below
         '.asb': 552,  # +40 per node, handled separately below
         '.baatarc': 256,
@@ -645,6 +660,7 @@ def CalcSize(file, data=None):
         '.bfarc': 256,
         '.bfevfl': 288,  # one exception: Event/EventFlow/Dm_ED_0004.bfevfl is 480
         '.bfsha': 256,
+        '.bgyml': 0,  # handled separately above
         '.bhtmp': 256,
         '.blal': 256,
         '.blarc': 256,
@@ -666,13 +682,14 @@ def CalcSize(file, data=None):
         '.dpi': 256,
         '.genvb': 384,
         '.jpg': 256,
+        '.mc': 0,  # handled separately above
         '.pack': 384,
         '.png': 256,
         '.quad': 256,
         '.sarc': 384,
         '.tscb': 256,
-        '.txtg': 256,
         '.txt': 256,
+        '.txtg': 256,
         '.vsts': 256,
         '.wbr': 256,
         '.zs': 0  # handled separately, for .ta.zs files
@@ -737,9 +754,9 @@ def CalcSize(file, data=None):
         if 'static.Nin_NX_NVN.esetb.byml' in os.path.abspath(file):
             size += 3840
     else:
-        size = (size + 1500) * 4
+        size = (size + 2000) * 6
     if DEV_MODE:
-        size = round(size * 1.2)
+        size = round(size * 1.4)
     return size
 
 # Merges list of changelogs into one (doesn't accept RCL or YAML)
