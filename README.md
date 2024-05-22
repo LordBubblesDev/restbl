@@ -5,9 +5,6 @@ This is a tool for working with and merging RESTBL files in *Tears of the Kingdo
 
 When developing or using mods, the RESTBL oftens becomes an issue as changes to file sizes may lead to the existing RESTBL entry becoming too small. This will result in the game crashing when it attempts to load in said resource. As a result, many mods come with edited RESTBL files, tailored for that specific mod. The issue arises when you have multiple mods all requiring RESTBL edits. This tool aims to solve that issue by automating the process without the need for external changelog files (such as YAML patches or .rcl files).
 
-### Important notes
-The tool requires a file called `checksums.bin` (located in `%LocalAppData%\TotK`). If that file doesn't exist when you run the executable, it will automatically download it from [this GitHub link](https://github.com/MasterBubbles/restbl/raw/master/checksums.bin).
-
 ## GUI Usage
 Here is what each options are for at the top:
 - Compress: this will compress the output resource tables with ZSTD (enabled by default)
