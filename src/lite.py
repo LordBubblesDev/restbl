@@ -946,6 +946,7 @@ ctk.set_appearance_mode("dark")
 #ctk.set_widget_scaling(1.5)
 
 def open_tool():
+    print(welcome())
     restbl_to_patch = ''
 
     def on_completion():
