@@ -939,10 +939,12 @@ import customtkinter as ctk
 import tkinter as tk
 from tkinter import filedialog
 import tkinter.messagebox as messagebox
-import threading
 
 ctk.set_appearance_mode("dark")
+
+# FOR SWITCH VERSION ONLY
 #ctk.set_widget_scaling(1.5)
+
 def open_tool():
     restbl_to_patch = ''
 
@@ -1031,9 +1033,10 @@ def open_tool():
     single_mod_path_container.pack(fill='x', padx=10)
     single_mod_path_entry = ctk.CTkEntry(master=single_mod_path_container, width=380)
     single_mod_path_entry.pack(side='left', fill='x', expand=True)
-    single_mod_path_entry.insert(0, "/flash/atmosphere/contents/0100F2C0115B6000")
     single_mod_path_browse = ctk.CTkButton(master=single_mod_path_container, text="Browse", command=lambda: update_entry(single_mod_path_entry))
     single_mod_path_browse.pack(side='right', padx=5)
+    # FOR SWITCH VERSION ONLY
+    #single_mod_path_entry.insert(0, "/flash/atmosphere/contents/0100F2C0115B6000")
 
     calculate_single_mod_button = ctk.CTkButton(master=app, text="Calculate (single mod)", command=lambda: [handle_actions(), calculate_single_mod()])
     calculate_single_mod_button.pack(pady=10)
@@ -1054,7 +1057,7 @@ def open_tool():
     calculate_restbl_button = ctk.CTkButton(master=app, text="Calculate RESTBL", command=lambda: [handle_actions(), calculate_restbl()])
     calculate_restbl_button.pack(pady=10)
 
-    exit_button = ctk.CTkButton(master=app, text="Exit", command=app.destroy, width=135, height=60, fg_color='#C70039', hover_color='#E57373')
+    exit_button = ctk.CTkButton(master=app, text="Exit", command=app.destroy, width=135, height=50, fg_color='#C70039', hover_color='#E57373')
     exit_button.pack(pady=10, padx=20, side='right')
 
     app.mainloop()
