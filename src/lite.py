@@ -1,7 +1,6 @@
 from icon import images
 from utils import *
 import zstandard as zs
-import yaml
 from collections import defaultdict
 from functools import lru_cache
 import numpy as np
@@ -207,82 +206,6 @@ class Restbl:
         changelog = {"Changes" : changes, "Additions" : additions, "Deletions" : deletions}
         return changelog
 
-    # RCL files for NX-Editor
-    def GenerateRcl(self, filename=''):
-        changelog = self.GenerateChangelog()
-        if self.hashmap == {}:
-            self._GenerateHashmap()
-        if filename == "":
-            filename = "changes.rcl"
-        with open(filename, 'w') as rcl:
-            for change in changelog["Changes"]:
-                string = self._TryGetPath(change, self.hashmap)
-                if type(string) == int:
-                    string = hex(string)
-                string = str(string)
-                rcl.write('* ' + string + ' = ' + str(changelog["Changes"][change]) + '\n')
-            for change in changelog["Additions"]:
-                string = self._TryGetPath(change, self.hashmap)
-                if type(string) == int:
-                    string = hex(string)
-                string = str(string)
-                rcl.write('+ ' + string + ' = ' + str(changelog["Additions"][change]) + '\n')
-            for change in changelog["Deletions"]:
-                string = self._TryGetPath(change, self.hashmap)
-                if type(string) == int:
-                    string = hex(string)
-                string = str(string)
-                rcl.write('- ' + string + '\n')
-
-    # Necessary to apply RCL files as patches
-    def GenerateChangelogFromRcl(self, rcl_path):
-        changelog = {"Changes" : {}, "Additions" : {}, "Deletions" : {}}
-        with open(rcl_path, 'r') as rcl:
-            for line in rcl:
-                entry = line.split(" = ")
-                match line[0]:
-                    case "*":
-                        changelog["Changes"][entry[0].lstrip("*+- ").rstrip("= ")] = int(entry[1])
-                    case "+":
-                        changelog["Additions"][entry[0].lstrip("*+- ").rstrip("= ")] = int(entry[1])
-                    case "-":
-                        changelog["Deletions"][entry[0].lstrip("*+- ").rstrip("= ")] = 0
-        return changelog
-
-    def GenerateYamlPatch(self, filename=''):
-        changelog = self.GenerateChangelog()
-        if filename == "":
-            filename = "changes.yml"
-        if self.hashmap == {}:
-            self._GenerateHashmap()
-        patch = {}
-        for change in changelog["Changes"]:
-            patch[self._TryGetPath(change, self.hashmap)] = changelog["Changes"][change]
-        for addition in changelog["Additions"]:
-            patch[self._TryGetPath(addition, self.hashmap)] = changelog["Additions"][addition]
-        for deletion in changelog["Deletions"]:
-            patch[self._TryGetPath(deletion, self.hashmap)] = 0
-        with open(filename, 'w') as yaml_patch:
-            yaml.dump(patch, yaml_patch, allow_unicode=True, encoding='utf-8', sort_keys=True)
-    
-    # Necessary to apply YAML patches
-    # YAML patches don't appear to support entry deletion
-    def GenerateChangelogFromYaml(self, yaml_path):
-        changelog = {"Changes" : {}, "Additions" : {}, "Deletions" : {}}
-        with open(yaml_path, 'r') as yml:
-            patch = yaml.safe_load(yml)
-        original_filepath = "restbl/ResourceSizeTable.Product." + self.game_version + ".rsizetable.json"
-        original_filepath = get_correct_path(original_filepath)
-        with open(original_filepath, 'r') as file:
-            original = json.load(file, object_pairs_hook=lambda d: {int(k) if k.isdigit() else k: v for k, v in d})
-        for change in patch:
-            hash = binascii.crc32(change.encode('utf-8'))
-            if hash in original["Hash Table"] or change in original["Collision Table"]:
-                changelog["Changes"][change] = patch[change]
-            else:
-                changelog["Additions"][change] = patch[change]
-        return changelog
-
     def ApplyChangelog(self, changelog):
         # Pre-calculate hashes
         changes = {binascii.crc32(k.encode('utf-8')) if isinstance(k, str) else k: v for k, v in changelog["Changes"].items()}
@@ -298,14 +221,6 @@ class Restbl:
         # Print added entries
         for k in set(changes.keys()).difference(self.hash_table.keys()):
             print(f"{k} was added as it was not an entry in the provided RESTBL")
-    
-    def ApplyRcl(self, rcl_path):
-        changelog = self.GenerateChangelogFromRcl(rcl_path)
-        self.ApplyChangelog(changelog)
-    
-    def ApplyYamlPatch(self, yaml_path):
-        changelog = self.GenerateChangelogFromYaml(yaml_path)
-        self.ApplyChangelog(changelog)
     
     # Merges RCL/YAML patches in a single directory into one changelog
     def MergePatches(self, patches_folder):
@@ -834,60 +749,6 @@ def merge_mods(mod_path=None, use_existing_restbl=False, restbl_path=None, versi
         restbl_path = ''  # Set restbl_path to an empty string if it's not provided
     return mod_path, restbl_path, version
 
-# Generates changelogs for the two RESTBL files to merge
-def merge_restbl(restbl_path0, restbl_path1):
-    restbl0 = Restbl(restbl_path0)
-    restbl1 = Restbl(restbl_path1)
-    return restbl0.GenerateChangelog(), restbl1.GenerateChangelog(), restbl0
-
-# Generates a changelog in the specified format
-def gen_changelog(restbl_path, format):
-    restbl = Restbl(restbl_path)
-    print("Generating changelog...")
-    if format == 'json':
-        changelog = restbl.GenerateChangelog()
-        with open('changelog.json', 'w') as f:
-            json.dump(changelog, f, indent=4)
-    elif format == 'rcl':
-        restbl.GenerateRcl()
-    elif format == 'yaml':
-        restbl.GenerateYamlPatch()
-    else:
-        raise ValueError("Invalid format. Choose between 'json', 'rcl', or 'yaml'.")
-    print("Finished")
-
-# Applies all RCL/YAML patches in a patch folder
-def apply_patches(patch_restbl, patches_path, compressed=True):
-    restbl = Restbl(patch_restbl)
-    print("Analyzing patches...")
-    patches = [i for i in os.listdir(patches_path) if os.path.isfile(os.path.join(patches_path, i)) and os.path.splitext(i)[1].lower() in ['.json', '.yml', '.yaml', '.rcl']]
-    print("Found patches:", patches)
-    changelogs = []
-    for patch in patches:
-        match os.path.splitext(patch)[1].lower():
-            case '.json':
-                with open(os.path.join(patches_path, patch), 'r') as f:
-                    changelogs.append(json.load(f, object_pairs_hook=lambda d: {int(k) if k.isdigit() else k: v for k, v in d}))
-            case '.yml' | '.yaml':
-                changelogs.append(restbl.GenerateChangelogFromYaml(os.path.join(patches_path, patch)))
-            case '.rcl':
-                changelogs.append(restbl.GenerateChangelogFromRcl(os.path.join(patches_path, patch)))
-    print("Merging patches...")
-    changelog = MergeChangelogs(changelogs)
-    print("Applying patches...")
-    restbl.ApplyChangelog(changelog)
-    restbl.Reserialize()
-    if compressed:
-        with open(restbl.filename, 'rb') as file:
-            data = file.read()
-        if os.path.exists(restbl.filename + '.zs'):
-            os.remove(restbl.filename + '.zs')
-        os.rename(restbl.filename, restbl.filename + '.zs')
-        with open(restbl.filename + '.zs', 'wb') as file:
-            compressor = zs.ZstdCompressor()
-            file.write(compressor.compress(data))
-    print("Finished")
-
 def GenerateRestblFromSingleMod(mod_path, restbl_path='', version=121, compressed=True, checksum=False, verbose=False):
     try:
         start_time = time.time()
@@ -1077,7 +938,7 @@ if __name__ == "__main__":
     if len(sys.argv) > 1:
         print(welcome())
         parser = argparse.ArgumentParser(description='RESTBL Tool', formatter_class=argparse.RawTextHelpFormatter)
-        parser.add_argument('-a', '--action', choices=['merge-mods', 'merge-restbl', 'generate-changelog', 'apply-patches', 'single-mod'], required=True, help='Action to perform')
+        parser.add_argument('-a', '--action', choices=['merge-mods', 'single-mod'], required=True, help='Action to perform')
         parser.add_argument('-c', '--compress', action='store_true', help='Compress the output')
         parser.add_argument('-v', '--verbose', action='store_true', help='Print the list of edited files from mods')
         parser.add_argument('-dev', '--dev-mode', action='store_true', help='Multiply the calculated sizes by a factor of 1.2 for testing')
@@ -1091,21 +952,6 @@ if __name__ == "__main__":
         merge_mods_group.add_argument('-u', '--use-existing-restbl', action='store_true', help='(Optional) Use existing RESTBL')
         merge_mods_group.add_argument('-d', '--delete-existing-restbl', action='store_true', help='(Optional) Delete existing RESTBL')
 
-        # Arguments for 'merge-restbl' action
-        merge_restbl_group = parser.add_argument_group('merge-restbl')
-        merge_restbl_group.add_argument('-r0', '--restbl-path0', type=str, help='(Mandatory) Path to the first RESTBL file to merge')
-        merge_restbl_group.add_argument('-r1', '--restbl-path1', type=str, help='(Mandatory) Path to the second RESTBL file to merge')
-
-        # Arguments for 'generate-changelog' action
-        gen_changelog_group = parser.add_argument_group('generate-changelog')
-        gen_changelog_group.add_argument('-l', '--log-restbl-path', type=str, help='(Mandatory) Path to the RESTBL file for generating changelog')
-        gen_changelog_group.add_argument('-f', '--format', choices=['json', 'rcl', 'yaml'], help='(Mandatory) Format of the changelog')
-
-        # Arguments for 'apply-patches' action
-        apply_patches_group = parser.add_argument_group('apply-patches')
-        apply_patches_group.add_argument('-p', '--patch-restbl', type=str, help='(Mandatory) Path to the RESTBL file to patch')
-        apply_patches_group.add_argument('-pp', '--patches-path', type=str, help='(Mandatory) Path to the folder containing patches (rcl, yaml, json)')
-
         args = parser.parse_args()
         DEV_MODE = args.dev_mode
         version = args.version
@@ -1116,31 +962,6 @@ if __name__ == "__main__":
             else:
                 restbl_path = args.restbl_path
             MergeMods(args.mod_path, restbl_path, version, args.compress, args.delete_existing_restbl, args.use_existing_restbl, args.use_checksums, args.verbose)
-        elif args.action == 'merge-restbl':
-            restbl_path0 = args.restbl_path0
-            restbl_path1 = args.restbl_path1
-            restbl0 = Restbl(restbl_path0)
-            restbl1 = Restbl(restbl_path1)
-            changelog0, changelog1, restbl = restbl0.GenerateChangelog(), restbl1.GenerateChangelog(), restbl0
-            print("Calculating merged changelog...")
-            changelog = MergeChangelogs([changelog0, changelog1])
-            print("Applying changes...")
-            restbl.ApplyChangelog(changelog)
-            restbl.Reserialize()
-            if args.compress:
-                with open(restbl.filename, 'rb') as file:
-                    data = file.read()
-                if os.path.exists(restbl.filename + '.zs'):
-                    os.remove(restbl.filename + '.zs')
-                os.rename(restbl.filename, restbl.filename + '.zs')
-                with open(restbl.filename + '.zs', 'wb') as file:
-                    compressor = zs.ZstdCompressor()
-                    file.write(compressor.compress(data))
-            print("Finished")
-        elif args.action == 'generate-changelog':
-            gen_changelog(args.log_restbl_path, args.format)
-        elif args.action == 'apply-patches':
-            apply_patches(args.patch_restbl, args.patches_path, compressed=args.compress)
         elif args.action == 'single-mod':
             if args.restbl_path is None:
                 restbl_path = ''  # Set restbl_path to an empty string if it's not provided
