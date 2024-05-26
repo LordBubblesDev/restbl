@@ -1039,7 +1039,7 @@ def open_tool():
     # FOR SWITCH VERSION ONLY
     #single_mod_path_entry.insert(0, "/flash/atmosphere/contents/0100F2C0115B6000")
 
-    calculate_single_mod_button = ctk.CTkButton(master=app, text="Calculate (single mod)", command=lambda: [handle_actions(), calculate_single_mod()])
+    calculate_single_mod_button = ctk.CTkButton(master=app, text="Calculate RESTBL", command=lambda: [handle_actions(), calculate_single_mod()])
     calculate_single_mod_button.pack(pady=10)
 
     # Mod Path Frame
@@ -1058,7 +1058,7 @@ def open_tool():
     calculate_restbl_button = ctk.CTkButton(master=app, text="Calculate RESTBL", command=lambda: [handle_actions(), calculate_restbl()])
     calculate_restbl_button.pack(pady=10)
 
-    exit_button = ctk.CTkButton(master=app, text="Exit", command=app.destroy, width=135, height=50, fg_color='#C70039', hover_color='#E57373')
+    exit_button = ctk.CTkButton(master=app, text="Exit", command=app.destroy, width=135, height=40, fg_color='#C70039', hover_color='#E57373')
     exit_button.pack(pady=10, padx=20, side='right')
 
     app.mainloop()

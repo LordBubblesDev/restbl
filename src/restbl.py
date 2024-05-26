@@ -1020,7 +1020,7 @@ def open_tool():
             ])
         ]
     ]
-    window = sg.Window('RESTBL Calculator 1.4.0', icon=images).Layout(layout)
+    window = sg.Window('RESTBL Calculator 1.4.1', icon=images).Layout(layout)
     while True:
         event, values = window.read()
         if event == sg.WINDOW_CLOSED or event == 'Exit':
