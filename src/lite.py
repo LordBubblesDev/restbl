@@ -939,6 +939,7 @@ import customtkinter as ctk
 import tkinter as tk
 from tkinter import filedialog
 import tkinter.messagebox as messagebox
+from tkinter import PhotoImage
 
 ctk.set_appearance_mode("dark")
 
@@ -975,7 +976,11 @@ def open_tool():
 
     app = ctk.CTk()
     app.title('RESTBL Calculator 1.4.1 Lite')
-    app.iconbitmap(images)
+    if os.name == 'nt':  # Windows
+        app.iconbitmap(images)
+    else:  # Other operating systems (e.g., Linux, macOS)
+        icon = PhotoImage(file=images)
+        app.iconphoto(True, icon)
     version_map = {
         '1.0.0': 100,
         '1.1.0': 110,

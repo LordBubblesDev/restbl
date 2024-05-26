@@ -9,5 +9,8 @@ def get_correct_path(relative_path):
 
     return os.path.join(base_path, relative_path)
 
-images = os.path.join('images', 'restbl.ico')
+if os.name == 'nt':  # posix is the name for Linux, Unix, etc.
+    images = os.path.join('images', 'restbl.ico')
+else:
+    images = os.path.join('images', 'restbl.png')
 images = get_correct_path(images)
