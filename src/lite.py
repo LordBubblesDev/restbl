@@ -861,7 +861,7 @@ def apply_patches(patch_restbl, patches_path, compressed=True):
     restbl = Restbl(patch_restbl)
     print("Analyzing patches...")
     patches = [i for i in os.listdir(patches_path) if os.path.isfile(os.path.join(patches_path, i)) and os.path.splitext(i)[1].lower() in ['.json', '.yml', '.yaml', '.rcl']]
-    print("Found patches:", patches)  # Add this line for debug information
+    print("Found patches:", patches)
     changelogs = []
     for patch in patches:
         match os.path.splitext(patch)[1].lower():
@@ -954,7 +954,6 @@ def open_tool():
         messagebox.showinfo("Success", "The resource table file was successfully generated")
 
     def calculate_single_mod():
-        # Update button to show processing state
         mod_path = single_mod_path_entry.get()
         if not os.path.isdir(mod_path):
             messagebox.showerror("Error", "Please enter a correct mod folder path.")
@@ -976,9 +975,9 @@ def open_tool():
 
     app = ctk.CTk()
     app.title('RESTBL Calculator 1.4.1 Lite')
-    if os.name == 'nt':  # Windows
+    if os.name == 'nt':
         app.iconbitmap(images)
-    else:  # Other operating systems (e.g., Linux, macOS)
+    else:
         icon = PhotoImage(file=images)
         app.iconphoto(True, icon)
     version_map = {
@@ -1015,7 +1014,7 @@ def open_tool():
     version_label.grid(row=2, column=0, padx=10, pady=5, sticky='nsew')
     version_combobox = ctk.CTkComboBox(master=options_frame, values=list(version_map.keys()), width=50, state="readonly")
     version_combobox.grid(row=2, column=1, padx=5, pady=5, sticky='nsew')
-    version_combobox.set("1.2.1")  # Set default version
+    version_combobox.set("1.2.1")
 
     # Set column configurations to distribute space evenly
     options_frame.grid_columnconfigure(0, weight=1)
@@ -1075,7 +1074,6 @@ def update_entry(entry_widget):
         entry_widget.insert(0, directory)
 
 if __name__ == "__main__":
-    # Check if any command-line arguments were passed
     if len(sys.argv) > 1:
         print(welcome())
         parser = argparse.ArgumentParser(description='RESTBL Tool', formatter_class=argparse.RawTextHelpFormatter)
@@ -1119,7 +1117,6 @@ if __name__ == "__main__":
                 restbl_path = args.restbl_path
             MergeMods(args.mod_path, restbl_path, version, args.compress, args.delete_existing_restbl, args.use_existing_restbl, args.use_checksums, args.verbose)
         elif args.action == 'merge-restbl':
-            # Replace the file browsing dialog with command line arguments
             restbl_path0 = args.restbl_path0
             restbl_path1 = args.restbl_path1
             restbl0 = Restbl(restbl_path0)
@@ -1151,5 +1148,4 @@ if __name__ == "__main__":
                 restbl_path = args.restbl_path
             GenerateRestblFromSingleMod(args.mod_path, restbl_path, version, args.compress, args.use_checksums, args.verbose)
     else:
-        # No command-line arguments were passed
         open_tool()
