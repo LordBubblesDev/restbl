@@ -1,5 +1,5 @@
 __pycache__/
-test/
+test*
 patches/
 build/
 dist/
@@ -10,5 +10,4 @@ dic/
 *.bat
 *.sh
 *.spec
-test.*
 bfres*.*
