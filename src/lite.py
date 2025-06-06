@@ -62,7 +62,7 @@ class Restbl:
         
         self.stream = ReadStream(data)
         self.filename = filepath
-        self.game_version = os.path.splitext(os.path.splitext(filepath)[0])[1][1:]
+        self.game_version = os.path.basename(filepath).split('.')[2]
         self.hashmap = {}
 
         self.magic = self.stream.read(6).decode('utf-8')
@@ -147,7 +147,7 @@ class Restbl:
     # Generates mapping of CRC32 hashes to filepaths
     def _GenerateHashmap(self, paths=[]):
         if paths == []:
-            version = os.path.splitext(os.path.splitext(os.path.basename(self.filename))[0])[1]
+            version = os.path.basename(self.filename).split('.')[2]
             string_list = "string_lists/" + version.replace('.', '') + ".txt"
             string_list = get_correct_path(string_list)
             paths = []
@@ -279,7 +279,8 @@ class Restbl:
         changelogs = []
         mods = [mod for mod in os.listdir(mod_path) if os.path.isdir(os.path.join(mod_path, mod))]
         for mod in mods:
-            restbl_path = os.path.join(mod_path, mod, 'romfs/System/Resource/ResourceSizeTable.Product.' + self.game_version + '.rsizetable.zs')
+            suffix = '.Nin_NX_NVN' if self.game_version >= 140 else ''
+            restbl_path = os.path.join(mod_path, mod, 'romfs/System/Resource/ResourceSizeTable.Product.' + self.game_version + suffix + '.rsizetable.zs')
             if smart_analysis:
                 if os.path.exists(restbl_path):
                     print(f"Found RESTBL: {restbl_path}")
@@ -417,7 +418,7 @@ def get_checksum(path, filechecksum):
         checksums = dict(zip(first_half, second_half))
         index_cache = {k: v for v, k in enumerate(first_half)}
 
-    versions = ["121", "120", "112", "111", "110", ""]
+    versions = ["140", "121", "120", "112", "111", "110", ""]
     for version in versions:
         key = xxhash.xxh64_intdigest((path + ('#' + version if version else '')).encode(encoding='UTF-16-LE', errors='strict'))
         if key in index_cache and checksums[key] == filechecksum:
@@ -659,7 +660,7 @@ def CalcSize(file, data=None):
                 if has_exb:
                     new_offset = int.from_bytes(data[offset + 0x20:offset + 0x24], byteorder='little')
                     signature_count = int.from_bytes(data[new_offset + offset:new_offset + offset + 4], byteorder='little')
-                    size += 16 + ((signature_count + 1) // 2) * 8
+            size += 16 + ((signature_count + 1) // 2) * 8
 
         if 'Event/EventFlow/Dm_ED_0004.bfevfl' in file:
             size += 192
@@ -692,14 +693,15 @@ def MergeChangelogs(changelogs):
     return changelog
 
 # Analyzes a directory of mods, generates a combined changelog, and generates a RESTBL from it
-def MergeMods(mod_path, restbl_path='', version=121, compressed=True, delete=False, smart_analysis=True, checksum=False, verbose=False):
+def MergeMods(mod_path, restbl_path='', version=140, compressed=True, delete=False, smart_analysis=True, checksum=False, verbose=False):
     try:
         start_time = time.time()
         directory = os.path.join(mod_path, "00_MERGED_RESTBL", "romfs", "System", "Resource")
         os.makedirs(directory, exist_ok=True)
         if not(os.path.exists(restbl_path)):
             print("Creating empty resource size table...")
-            filename = os.path.join(directory, 'ResourceSizeTable.Product.' + str(version).replace('.', '') + '.rsizetable')
+            suffix = '.Nin_NX_NVN' if version >= 140 else ''
+            filename = os.path.join(directory, 'ResourceSizeTable.Product.' + str(version).replace('.', '') + suffix + '.rsizetable')
             with open(filename, 'wb') as file:
                 buffer = WriteStream(file)
                 buffer.write("RESTBL".encode('utf-8'))
@@ -749,14 +751,15 @@ def merge_mods(mod_path=None, use_existing_restbl=False, restbl_path=None, versi
         restbl_path = ''  # Set restbl_path to an empty string if it's not provided
     return mod_path, restbl_path, version
 
-def GenerateRestblFromSingleMod(mod_path, restbl_path='', version=121, compressed=True, checksum=False, verbose=False):
+def GenerateRestblFromSingleMod(mod_path, restbl_path='', version=140, compressed=True, checksum=False, verbose=False):
     try:
         start_time = time.time()
         if not(os.path.exists(restbl_path)):
             print("Creating empty resource size table...")
             directory = os.path.join(mod_path, "romfs", "System", "Resource")
             os.makedirs(directory, exist_ok=True)
-            filename = os.path.join(directory, 'ResourceSizeTable.Product.' + str(version).replace('.', '') + '.rsizetable')
+            suffix = '.Nin_NX_NVN' if version >= 140 else ''
+            filename = os.path.join(directory, 'ResourceSizeTable.Product.' + str(version).replace('.', '') + suffix + '.rsizetable')
             with open(filename, 'wb') as file:
                 buffer = WriteStream(file)
                 buffer.write("RESTBL".encode('utf-8'))
@@ -835,7 +838,7 @@ def open_tool():
         calculate_restbl_button.configure(text="Calculate RESTBL", fg_color="#1f6aa5", text_color="white", state="normal"), app.update(), on_completion()
 
     app = ctk.CTk()
-    app.title('RESTBL Calculator 1.4.1 Lite')
+    app.title('RESTBL Calculator 1.5.0 Lite')
     if os.name == 'nt':
         app.iconbitmap(images)
     else:
@@ -848,6 +851,7 @@ def open_tool():
         '1.1.2': 112,
         '1.2.0': 120,
         '1.2.1': 121,
+        '1.4.0': 140,
     }
 
     # Options Frame
@@ -875,7 +879,7 @@ def open_tool():
     version_label.grid(row=2, column=0, padx=10, pady=5, sticky='nsew')
     version_combobox = ctk.CTkComboBox(master=options_frame, values=list(version_map.keys()), width=50, state="readonly")
     version_combobox.grid(row=2, column=1, padx=5, pady=5, sticky='nsew')
-    version_combobox.set("1.2.1")
+    version_combobox.set("1.4.0")
 
     # Set column configurations to distribute space evenly
     options_frame.grid_columnconfigure(0, weight=1)
@@ -945,7 +949,7 @@ if __name__ == "__main__":
         parser.add_argument('-cs', '--use-checksums', action='store_true', help='[Recommended] Use checksums')
         parser.add_argument('-m', '--mod-path', type=str, help='Mandatory for actions "merge-mods" and "single-mod"')
         parser.add_argument('-r', '--restbl-path', type=str, help='(Optional) Path to a RESTBL file to patch when calculating entries for mods')
-        parser.add_argument('-ver', '--version', type=int, default=121, help='(Optional) TotK version - default: 121')
+        parser.add_argument('-ver', '--version', type=int, default=140, help='(Optional) TotK version - default: 140')
 
         # Arguments for 'merge-mods' action
         merge_mods_group = parser.add_argument_group('merge-mods')
