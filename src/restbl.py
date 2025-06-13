@@ -317,8 +317,8 @@ class Restbl:
         return changelog
 
     # Changelog from analyzing mod directory
-    def GenerateChangelogFromMod(self, mod_path, checksum=False, verbose=False):
-        info = GetInfoWithChecksum(mod_path + '/romfs', verbose) if checksum else GetInfo(mod_path + '/romfs', verbose)
+    def GenerateChangelogFromMod(self, mod_path, checksum=False, verbose=False, version=None):
+        info = GetInfoWithChecksum(mod_path + '/romfs', verbose, version) if checksum else GetInfo(mod_path + '/romfs', version, verbose)
         changelog = {"Changes" : {}, "Additions" : {}, "Deletions" : {}}
         if not self.hashmap:
             self._GenerateHashmap()
@@ -348,12 +348,12 @@ class Restbl:
         return changelog
     
     # Same as above but for multiple mods
-    def GenerateChangelogFromModDirectory(self, mod_path, delete=False, smart_analysis=True, checksum=False, verbose=False):
+    def GenerateChangelogFromModDirectory(self, mod_path, delete=False, smart_analysis=True, checksum=False, verbose=False, version=None):
         changelogs = []
         mods = [mod for mod in os.listdir(mod_path) if os.path.isdir(os.path.join(mod_path, mod))]
         for mod in mods:
-            suffix = '.Nin_NX_NVN' if self.game_version >= 140 else ''
-            restbl_path = os.path.join(mod_path, mod, 'romfs/System/Resource/ResourceSizeTable.Product.' + self.game_version + suffix + '.rsizetable.zs')
+            suffix = '.Nin_NX_NVN' if version >= 140 else ''
+            restbl_path = os.path.join(mod_path, mod, 'romfs/System/Resource/ResourceSizeTable.Product.' + str(version).replace('.', '') + suffix + '.rsizetable.zs')
             if smart_analysis:
                 if os.path.exists(restbl_path):
                     print(f"Found RESTBL: {restbl_path}")
@@ -361,9 +361,9 @@ class Restbl:
                     changelogs.append(restbl.GenerateChangelog())
                 else:
                     print(f"Did not find RESTBL in {mod}")
-                    changelogs.append(self.GenerateChangelogFromMod(os.path.join(mod_path, mod), checksum, verbose))
+                    changelogs.append(self.GenerateChangelogFromMod(os.path.join(mod_path, mod), checksum, verbose, version))
             else:
-                changelogs.append(self.GenerateChangelogFromMod(os.path.join(mod_path, mod), checksum, verbose))
+                changelogs.append(self.GenerateChangelogFromMod(os.path.join(mod_path, mod), checksum, verbose, version))
             if delete:
                 try:
                     os.remove(restbl_path)
@@ -437,10 +437,9 @@ def GetFileLists(mod_path):
     return files
 
 # Same as above but stores the estimated entry size as well
-def GetInfo(romfs_path, verbose=False):
-    global version
+def GetInfo(romfs_path, version=None, verbose=False):
     global game_file_extensions
-    version_str = str(version)
+    version_str = str(version) if version is not None else None
     zs = zstd.Zstd()
     info = {}
     for dirpath, subdir, files in os.walk(romfs_path):
@@ -456,7 +455,7 @@ def GetInfo(romfs_path, verbose=False):
             if 'RSDB' in dirpath and file.endswith('.rstbl.byml.zs'):
                 # Extract the version part of the filename
                 file_version = file.split('.')[-4]  # Assuming the format is always like "Product.120.rstbl.byml"
-                if file_version != version_str:
+                if version_str and file_version != version_str:
                     if verbose:
                         print(f"Ignoring {file} as its version {file_version} does not match the selected version {version_str}.")
                     continue  # Skip this file
@@ -515,12 +514,10 @@ def get_checksum(path, filechecksum):
     return np.uint64(0)
 
 # Same as GetInfo but does a checksum comparison first to see if the file has been modified
-def GetInfoWithChecksum(romfs_path, verbose=False):
-    global version
+def GetInfoWithChecksum(romfs_path, verbose=False, version=None):
     global game_file_extensions
-    version_str = str(version)
-    info = {}
     zs = zstd.Zstd()
+    info = {}
     for dir,subdir,files in os.walk(romfs_path):
         for file in files:
             ext = os.path.splitext(file)[1]
@@ -531,9 +528,9 @@ def GetInfoWithChecksum(romfs_path, verbose=False):
             if 'RSDB' in dir and file.endswith('.rstbl.byml.zs'):
                 # Extract the version part of the filename
                 file_version = file.split('.')[-4]  # Assuming the format is always like "Product.120.rstbl.byml"
-                if file_version != version_str:
+                if version is not None and file_version != str(version):
                     if verbose:
-                        print(f"Ignoring {file} as its version {file_version} does not match the selected version {version_str}.")
+                        print(f"Ignoring {file} as its version {file_version} does not match the selected version {version}.")
                     continue  # Skip this file
             if os.path.isfile(filepath):
                 filepath = os.path.join(os.path.relpath(dir, romfs_path), os.path.basename(filepath))
@@ -804,7 +801,7 @@ def MergeMods(mod_path, restbl_path='', version=141, compressed=True, delete=Fal
         else:
             restbl = Restbl(restbl_path)
         print("Generating changelogs...")
-        changelog = restbl.GenerateChangelogFromModDirectory(mod_path, delete, smart_analysis, checksum, verbose)
+        changelog = restbl.GenerateChangelogFromModDirectory(mod_path, delete, smart_analysis, checksum, verbose, version)
         with open('RestblChangelog.json', 'w') as f:
             json.dump(changelog, f, indent=4)
         print("Applying changes...")
@@ -919,7 +916,7 @@ def GenerateRestblFromSingleMod(mod_path, restbl_path='', version=141, compresse
         else:
             restbl = Restbl(restbl_path)
         print("Generating changelog...")
-        changelog = restbl.GenerateChangelogFromMod(mod_path, checksum, verbose)
+        changelog = restbl.GenerateChangelogFromMod(mod_path, checksum, verbose, version)
         with open('RestblChangelog.json', 'w') as f:
             json.dump(changelog, f, indent=4)
         print("Applying changes...")
