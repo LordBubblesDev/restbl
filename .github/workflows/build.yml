@@ -27,9 +27,11 @@ jobs:
         
     - name: Create Windows archives
       run: |
-        move dist\*.exe .
+        cd dist
         7z a "RESTBL-Lite-${{ github.event.release.tag_name }}-Windows-x64.zip" "lite.exe"
         7z a "RESTBL-${{ github.event.release.tag_name }}-Windows-x64.zip" "restbl.exe"
+        move *.zip ..
+        cd ..
         
     - name: Upload Windows release assets
       uses: softprops/action-gh-release@v2
@@ -61,9 +63,11 @@ jobs:
         
     - name: Create Linux archives
       run: |
-        mv dist/* .
+        cd dist
         zip "RESTBL-Lite-${{ github.event.release.tag_name }}-Linux-x64.zip" "lite"
         zip "RESTBL-${{ github.event.release.tag_name }}-Linux-x64.zip" "restbl"
+        mv *.zip ..
+        cd ..
         
     - name: Upload Linux release assets
       uses: softprops/action-gh-release@v2
