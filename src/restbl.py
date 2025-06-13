@@ -1008,4 +1008,4 @@ def UpdateRestblTool():
     except Exception as e:
         print(f"\n\nError during ChecksumGenerator process: {str(e)}")
 
-UpdateRestblTool()
+#UpdateRestblTool()
