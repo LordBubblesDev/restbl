@@ -25,7 +25,7 @@ jobs:
         pyinstaller --onefile "src\restbl.py" --icon="images/restbl.ico" --add-data "checksums/checksums.bin;checksums/" --add-data "images/restbl.ico;images/" --add-data "restbl/*.json;restbl/" --add-data "dic/zsdic;dic/" --add-data "string_lists/*.txt;string_lists/"
         
     - name: Upload Windows artifacts
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: windows-builds
         path: |
@@ -53,7 +53,7 @@ jobs:
         pyinstaller --onefile "src/restbl.py" --add-data="checksums/checksums.bin:checksums/" --add-data="restbl/*.json:restbl/" --add-data="string_lists/*.txt:string_lists/" --add-data="dic/zsdic:dic/" --add-data="images/restbl.png:images/"
         
     - name: Upload Linux artifacts
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: linux-builds
         path: |
