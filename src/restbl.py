@@ -11,25 +11,11 @@ import os
 import binascii
 import json
 import sys
-import argparse
 import time
 import zstd
 import subprocess
 import shutil
 
-def welcome():
-    return """
-              / \\\\
-             /   \\\\
-            /_____\\\\
-           /\\\\    /\\\\
-          /  \\\\  /  \\\\
-         /____\\\\/____\\\\
-   __________________________
-
-   - TotK RESTBL Calculator -
-   __________________________
-"""
 # For pyinstaller relative paths
 def get_correct_path(relative_path):
     try:
@@ -795,8 +781,10 @@ def MergeChangelogs(changelogs):
     return changelog
 
 # Analyzes a directory of mods, generates a combined changelog, and generates a RESTBL from it
-def MergeMods(mod_path, restbl_path='', version=141, compressed=True, delete=False, smart_analysis=True, checksum=False, verbose=False):
+def MergeMods(mod_path, restbl_path='', version=141, compressed=True, delete=False, smart_analysis=True, checksum=False, verbose=False, dev_mode=False):
     try:
+        global DEV_MODE
+        DEV_MODE = dev_mode
         start_time = time.time()
         directory = os.path.join(mod_path, "00_MERGED_RESTBL", "romfs", "System", "Resource")
         os.makedirs(directory, exist_ok=True)
@@ -907,8 +895,10 @@ def apply_patches(patch_restbl, patches_path, compressed=True):
             file.write(compressor.compress(data))
     print("Finished")
 
-def GenerateRestblFromSingleMod(mod_path, restbl_path='', version=141, compressed=True, checksum=False, verbose=False):
+def GenerateRestblFromSingleMod(mod_path, restbl_path='', version=141, compressed=True, checksum=False, verbose=False, dev_mode=False):
     try:
+        global DEV_MODE
+        DEV_MODE = dev_mode
         start_time = time.time()
         if not(os.path.exists(restbl_path)):
             print("Creating empty resource size table...")
@@ -957,14 +947,25 @@ def GenerateRestblFromSingleMod(mod_path, restbl_path='', version=141, compresse
         restbl.clear_cache()
 
 def UpdateRestblTool():
+    version_map = {
+        '1.0.0',
+        '1.1.0',
+        '1.1.1',
+        '1.1.2',
+        '1.2.0',
+        '1.2.1',
+        '1.4.0',
+        '1.4.1'
+    }
+    
     # Convert RESTBL to JSON
-    totk_path = "F:/TOTK"
-    romfs_version = "1.4.1"
-    romfs_version_without_dots = romfs_version.replace('.', '')
-    romfs_path = os.path.join(totk_path, romfs_version)
-    restbl_path = os.path.join(romfs_path, "System", "Resource", "ResourceSizeTable.Product." + romfs_version_without_dots + ".Nin_NX_NVN.rsizetable.zs")
+    totk_path = "F:\\TOTK"
+    latest_version = sorted(list(version_map))[-1]
+    latest_version_without_dots = latest_version.replace('.', '')
+    romfs_path = os.path.join(totk_path, latest_version)
+    restbl_path = os.path.join(romfs_path, "System", "Resource", "ResourceSizeTable.Product." + latest_version_without_dots + ".Nin_NX_NVN.rsizetable.zs")
     restbl = Restbl(restbl_path)
-    restbl.ConvertToJson(r"F:\dev\restbl-master\restbl\ResourceSizeTable.Product.{}.rsizetable.json".format(romfs_version_without_dots))
+    restbl.ConvertToJson(r"F:\dev\restbl-master\restbl\ResourceSizeTable.Product.{}.rsizetable.json".format(latest_version_without_dots))
     
     # Run HashCalculator
     hash_calculator_path = r"F:\dev\Totk.HashCalculator\src\bin\Release\net7.0\Totk.HashCalculator.exe"
@@ -975,307 +976,36 @@ def UpdateRestblTool():
         subprocess.run([
             hash_calculator_path,
             romfs_path,
-            "-v", romfs_version,
+            "-v", latest_version,
             "-o", temp_output_dir
         ], check=True)
         
-        temp_file = os.path.join(temp_output_dir, f"string-table-{romfs_version}.txt")
-        final_file = os.path.join(final_output_dir, f"{romfs_version_without_dots}.txt")
+        temp_file = os.path.join(temp_output_dir, f"string-table-{latest_version}.txt")
+        final_file = os.path.join(final_output_dir, f"{latest_version_without_dots}.txt")
         
-        if os.path.exists(temp_file):
-            os.makedirs(final_output_dir, exist_ok=True)
-            if os.path.exists(final_file):
-                os.remove(final_file)
-            os.rename(temp_file, final_file)
-        
-        if os.path.exists(temp_output_dir):
-            shutil.rmtree(temp_output_dir)
-            
+        os.makedirs(final_output_dir, exist_ok=True)
+        if os.path.exists(final_file):
+            os.remove(final_file)
+        os.rename(temp_file, final_file)
+        shutil.rmtree(temp_output_dir)
+        print("\n\n")
+
     except Exception as e:
-        print(f"Error during HashCalculator process: {str(e)}")
+        print(f"\n\nError during HashCalculator process: {str(e)}")
 
-def open_tool():
+    # Run ChecksumGenerator for all versions
+    checksum_generator_path = r"F:\dev\ModuleSystem.ChecksumGenerator\src\bin\release\net8.0\ModuleSystem.ChecksumGenerator.exe"
+    checksum_output_path = r"F:\dev\restbl-master\checksums\checksums.bin"
+    version_paths = "|".join([f"F:\\TOTK\\{version}" for version in sorted(version_map)])
+    
+    try:
+        subprocess.run([
+            checksum_generator_path,
+            version_paths,
+            "-o", checksum_output_path
+        ], check=True)
+        print("\n\nSuccessfully generated checksums for all versions")
+    except Exception as e:
+        print(f"\n\nError during ChecksumGenerator process: {str(e)}")
 
-    # UpdateRestblTool()
-
-    # GUI version
-    print(welcome())
-    import PySimpleGUI as sg
-    global DEV_MODE
-    global version
-    sg.theme('Black')
-    version_map = {
-        '1.0.0': 100,
-        '1.1.0': 110,
-        '1.1.1': 111,
-        '1.1.2': 112,
-        '1.2.0': 120,
-        '1.2.1': 121,
-        '1.4.0': 140,
-        '1.4.1': 141,
-    }
-    layout = [
-        [
-            sg.Column([
-                [sg.Column([
-                    [sg.Text('Options:'), 
-                    sg.Checkbox(default=True, text='Compress', size=(8,5), key='compressed'),
-                    sg.Checkbox(default=False, text='Use Existing RESTBL', size=(17,5), key='smart_analyze'),
-                    sg.Checkbox(default=False, text='Delete Existing RESTBL', size=(19,5), key='delete')],
-                    [sg.Text(' ', size=(6, 1)),  # Empty text element to create offset
-                    sg.Checkbox(default=True, text='Use Checksums', size=(12,5), key='use_checksums'),
-                    sg.Checkbox(default=False, text='Verbose', size=(8,5), key='verbose'),
-                    sg.Text('Version:'), sg.Combo(list(version_map.keys()), default_value='1.4.1', key='version', readonly=True)],
-                    [sg.Text(' ', size=(6, 1)),  # Empty text element to create offset
-                    sg.Checkbox(default=False, text='Patch existing RESTBL', key='patch_existing', size=(20, 1)),
-                    sg.Checkbox('Dev Mode', default=False, key='dev_mode')]
-                ], size=(510, 90))],
-                [sg.Frame('Calculate RESTBL from Multiple Mods', [
-                    [sg.Column([
-                        [sg.Text('Mod Path:', size=(14, 1)), sg.Input(key='mod_path', size=(44, 1)), sg.FolderBrowse()],
-                        [sg.Text('', size=(1, 1)),
-                        sg.Button('Calculate RESTBL', size=(14, 1)),
-                        sg.Text('', size=(1, 1))
-                        ]
-                    ], size=(510, 70), element_justification='center')]
-                ])],
-                [sg.Frame('Calculate RESTBL from Single Mod', [
-                    [sg.Column([
-                        [sg.Text('Mod Path:', size=(14, 1)), sg.Input(key='single_mod_path', size=(44, 1)), sg.FolderBrowse()],
-                        [sg.Text('', size=(1, 1)),
-                        sg.Button('Calculate (single mod)', size=(20, 1)),
-                        sg.Text('', size=(1, 1))
-                        ]
-                    ], size=(510, 70), element_justification='center')]
-                ])],
-                [sg.Frame('Merge RESTBLs', [
-                    [sg.Column([
-                        [sg.Text('RESTBL Path 1:', size=(14, 1)), sg.Input(key='restbl_path0', size=(44, 1)), sg.FileBrowse(file_types=(("RESTBL Files", "*.rsizetable*"),))],
-                        [sg.Text('RESTBL Path 2:', size=(14, 1)), sg.Input(key='restbl_path1', size=(44, 1)), sg.FileBrowse(file_types=(("RESTBL Files", "*.rsizetable*"),))],
-                        [sg.Text('', size=(1, 1)),
-                        sg.Button('Merge RESTBLs', size=(14, 1)),
-                        sg.Text('', size=(1, 1))
-                        ]
-                    ], size=(510, 95), element_justification='center')]
-                ])],
-                [sg.Frame('Generate Changelog', [
-                    [sg.Column([
-                        [sg.Text('RESTBL Path:', size=(14, 1)), sg.Input(key='log_restbl_path', size=(44, 1)), sg.FileBrowse(file_types=(("RESTBL Files", "*.rsizetable*"),))],
-                        [sg.Text('Format:', size=(14, 1)), sg.Combo(['json', 'rcl', 'yaml'], default_value='json', key='format')],
-                        [sg.Text('', size=(1, 1)),
-                        sg.Button('Generate Changelog', size=(16, 1)),
-                        sg.Text('', size=(1, 1))
-                        ]
-                    ], size=(510, 90), element_justification='center')]
-                ])],
-                [sg.Frame('Apply Patches', [
-                    [sg.Column([
-                        [sg.Text('RESTBL to patch:', size=(14, 1)), sg.Input(key='patch_restbl', size=(44, 1)), sg.FileBrowse(file_types=(("RESTBL Files", "*.rsizetable*"),))],
-                        [sg.Text('Folder with patches:', size=(14, 1)), sg.Input(key='patches_path', size=(44, 1)), sg.FolderBrowse()],
-                        [sg.Text('', size=(1, 1)),
-                        sg.Button('Apply Patches', size=(14, 1)),
-                        sg.Text('', size=(1, 1))
-                        ]
-                    ], size=(510, 97), element_justification='center')]
-                ])],
-                [sg.Button('Exit')]
-            ])
-        ]
-    ]
-    window = sg.Window('RESTBL Calculator 1.5.0', icon=images).Layout(layout)
-    while True:
-        event, values = window.read()
-        if event == sg.WINDOW_CLOSED or event == 'Exit':
-            break
-
-        if values['patch_existing']:
-            restbl_to_patch = sg.PopupGetFile('Please select a RESTBL file to patch with the new calculated values', file_types=(("RESTBL Files", "*.rsizetable*"),), title='Select RESTBL File')
-            if not restbl_to_patch:
-                sg.Popup('Please select a RESTBL file.')
-                continue
-        else:
-            restbl_to_patch = ''
-
-        if event == 'Calculate RESTBL':
-            import gc
-            import threading
-            mod_path = values['mod_path']
-            DEV_MODE = values['dev_mode']
-            if not os.path.isdir(mod_path):
-                sg.Popup('Please enter a correct mod folder path.', title='Error')
-            else:
-                version = version_map[values['version']]
-                popup = sg.Window('Please wait...', [[sg.Text('Please wait...')]], auto_close=False, disable_close=True, finalize=True)
-                thread = threading.Thread(target=MergeMods, args=(mod_path, restbl_to_patch, version, values['compressed'], values['delete'], values['smart_analyze'], values['use_checksums'], values['verbose']))
-                thread.start()
-                while True:
-                    # Process events and update the screen
-                    event, values = window.read(timeout=1000)  # Add a small delay
-                    # Check if the thread is still running
-                    if not thread.is_alive():
-                        popup.close()
-                        sg.Popup('Action completed!')
-                        break
-                gc.collect()
-
-        elif event == 'Merge RESTBLs':
-            restbl_path0 = values['restbl_path0']
-            restbl_path1 = values['restbl_path1']
-            if not (os.path.isfile(restbl_path0) and os.path.isfile(restbl_path1) and 
-                    (restbl_path0.endswith(('.rsizetable', '.rsizetable.zs')) and 
-                    restbl_path1.endswith(('.rsizetable', '.rsizetable.zs')))):
-                sg.Popup('Please select two resource tables to merge', title='Error')
-            else:
-                popup = sg.Window('Please wait...', [[sg.Text('Please wait...')]], auto_close=False, disable_close=True, finalize=True)
-                window.read(timeout=0)
-                popup.bring_to_front()
-                changelog0, changelog1, restbl = merge_restbl(restbl_path0, restbl_path1)
-                filename = os.path.basename(restbl.filename)
-                restbl.filename = os.path.join(os.getcwd(), filename)
-                print(restbl.filename)
-                print("Calculating merged changelog...")
-                changelog = MergeChangelogs([changelog0, changelog1])
-                print("Applying changes...")
-                restbl.ApplyChangelog(changelog)
-                restbl.Reserialize()
-                if values['compressed']:
-                    with open(restbl.filename, 'rb') as file:
-                        data = file.read()
-                    if os.path.exists(restbl.filename + '.zs'):
-                        os.remove(restbl.filename + '.zs')
-                    os.rename(restbl.filename, restbl.filename + '.zs')
-                    with open(restbl.filename + '.zs', 'wb') as file:
-                        compressor = zs.ZstdCompressor()
-                        file.write(compressor.compress(data))
-                print("Finished")
-                popup.close()
-                sg.Popup('Action completed!')
-
-        elif event == 'Generate Changelog':
-            log_restbl_path = values['log_restbl_path']
-            if not (os.path.isfile(log_restbl_path) and 
-                    (log_restbl_path.endswith(('.rsizetable', '.rsizetable.zs')))):
-                sg.Popup('Please select a resource table to generate a changelog', title='Error')
-            else:
-                popup = sg.Window('Please wait...', [[sg.Text('Please wait...')]], auto_close=False, disable_close=True, finalize=True)
-                window.read(timeout=0)
-                popup.bring_to_front()
-                gen_changelog(values['log_restbl_path'], values['format'])
-                popup.close()
-                sg.Popup('Action completed!')
-
-        elif event == 'Apply Patches':
-            patch_restbl = values['patch_restbl']
-            patches_path = values['patches_path']
-            if not (os.path.isfile(patch_restbl) and os.path.isdir(patches_path) and 
-                    (patch_restbl.endswith(('.rsizetable', '.rsizetable.zs')))):
-                sg.Popup('Please select a resource table to patch and a folder containing patches.', title='Error')
-            else:
-                popup = sg.Window('Please wait...', [[sg.Text('Please wait...')]], auto_close=False, disable_close=True, finalize=True)
-                window.read(timeout=0)
-                popup.bring_to_front()
-                apply_patches(values['patch_restbl'], values['patches_path'], compressed=values['compressed'])
-                print("Finished")
-                popup.close()
-                sg.Popup('Action completed!')
-
-        elif event == 'Calculate (single mod)':
-            import gc
-            import threading
-            DEV_MODE = values['dev_mode']
-            mod_path = values['single_mod_path']
-            if not os.path.isdir(mod_path):
-                sg.Popup('Please enter a correct mod folder path.', title='Error')
-            else:
-                version = version_map[values['version']]
-                popup = sg.Window('Please wait...', [[sg.Text('Please wait...')]], auto_close=False, disable_close=True, finalize=True)
-                thread = threading.Thread(target=GenerateRestblFromSingleMod, args=(mod_path, restbl_to_patch, version, values['compressed'], values['use_checksums'], values['verbose']))
-                thread.start()
-                while True:
-                    event, values = window.read(timeout=1000)
-                    if not thread.is_alive():
-                        popup.close()
-                        sg.Popup('Action completed!')
-                        break
-                gc.collect()
-    window.close()
-            
-if __name__ == "__main__":
-    # Check if any command-line arguments were passed
-    if len(sys.argv) > 1:
-        print(welcome())
-        parser = argparse.ArgumentParser(description='RESTBL Tool', formatter_class=argparse.RawTextHelpFormatter)
-        parser.add_argument('-a', '--action', choices=['merge-mods', 'merge-restbl', 'generate-changelog', 'apply-patches', 'single-mod'], required=True, help='Action to perform')
-        parser.add_argument('-c', '--compress', action='store_true', help='Compress the output')
-        parser.add_argument('-v', '--verbose', action='store_true', help='Print the list of edited files from mods')
-        parser.add_argument('-dev', '--dev-mode', action='store_true', help='Multiply the calculated sizes by a factor of 1.2 for testing')
-        parser.add_argument('-cs', '--use-checksums', action='store_true', help='[Recommended] Use checksums')
-        parser.add_argument('-m', '--mod-path', type=str, help='Mandatory for actions "merge-mods" and "single-mod"')
-        parser.add_argument('-r', '--restbl-path', type=str, help='(Optional) Path to a RESTBL file to patch when calculating entries for mods')
-        parser.add_argument('-ver', '--version', type=int, default=141, help='(Optional) TotK version - default: 141')
-
-        # Arguments for 'merge-mods' action
-        merge_mods_group = parser.add_argument_group('merge-mods')
-        merge_mods_group.add_argument('-u', '--use-existing-restbl', action='store_true', help='(Optional) Use existing RESTBL')
-        merge_mods_group.add_argument('-d', '--delete-existing-restbl', action='store_true', help='(Optional) Delete existing RESTBL')
-
-        # Arguments for 'merge-restbl' action
-        merge_restbl_group = parser.add_argument_group('merge-restbl')
-        merge_restbl_group.add_argument('-r0', '--restbl-path0', type=str, help='(Mandatory) Path to the first RESTBL file to merge')
-        merge_restbl_group.add_argument('-r1', '--restbl-path1', type=str, help='(Mandatory) Path to the second RESTBL file to merge')
-
-        # Arguments for 'generate-changelog' action
-        gen_changelog_group = parser.add_argument_group('generate-changelog')
-        gen_changelog_group.add_argument('-l', '--log-restbl-path', type=str, help='(Mandatory) Path to the RESTBL file for generating changelog')
-        gen_changelog_group.add_argument('-f', '--format', choices=['json', 'rcl', 'yaml'], help='(Mandatory) Format of the changelog')
-
-        # Arguments for 'apply-patches' action
-        apply_patches_group = parser.add_argument_group('apply-patches')
-        apply_patches_group.add_argument('-p', '--patch-restbl', type=str, help='(Mandatory) Path to the RESTBL file to patch')
-        apply_patches_group.add_argument('-pp', '--patches-path', type=str, help='(Mandatory) Path to the folder containing patches (rcl, yaml, json)')
-
-        args = parser.parse_args()
-        DEV_MODE = args.dev_mode
-        version = args.version
-
-        if args.action == 'merge-mods':
-            if args.restbl_path is None:
-                restbl_path = ''  # Set restbl_path to an empty string if it's not provided
-            else:
-                restbl_path = args.restbl_path
-            MergeMods(args.mod_path, restbl_path, version, args.compress, args.delete_existing_restbl, args.use_existing_restbl, args.use_checksums, args.verbose)
-        elif args.action == 'merge-restbl':
-            # Replace the file browsing dialog with command line arguments
-            restbl_path0 = args.restbl_path0
-            restbl_path1 = args.restbl_path1
-            restbl0 = Restbl(restbl_path0)
-            restbl1 = Restbl(restbl_path1)
-            changelog0, changelog1, restbl = restbl0.GenerateChangelog(), restbl1.GenerateChangelog(), restbl0
-            print("Calculating merged changelog...")
-            changelog = MergeChangelogs([changelog0, changelog1])
-            print("Applying changes...")
-            restbl.ApplyChangelog(changelog)
-            restbl.Reserialize()
-            if args.compress:
-                with open(restbl.filename, 'rb') as file:
-                    data = file.read()
-                if os.path.exists(restbl.filename + '.zs'):
-                    os.remove(restbl.filename + '.zs')
-                os.rename(restbl.filename, restbl.filename + '.zs')
-                with open(restbl.filename + '.zs', 'wb') as file:
-                    compressor = zs.ZstdCompressor()
-                    file.write(compressor.compress(data))
-            print("Finished")
-        elif args.action == 'generate-changelog':
-            gen_changelog(args.log_restbl_path, args.format)
-        elif args.action == 'apply-patches':
-            apply_patches(args.patch_restbl, args.patches_path, compressed=args.compress)
-        elif args.action == 'single-mod':
-            if args.restbl_path is None:
-                restbl_path = ''  # Set restbl_path to an empty string if it's not provided
-            else:
-                restbl_path = args.restbl_path
-            GenerateRestblFromSingleMod(args.mod_path, restbl_path, version, args.compress, args.use_checksums, args.verbose)
-    else:
-        # No command-line arguments were passed
-        open_tool()
+UpdateRestblTool()

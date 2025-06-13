@@ -1,11 +1,12 @@
 name: Build
 
 on:
+  workflow_dispatch:
   release:
     types: [created]
 
 jobs:
-  build-windows:
+  build-windows-x64:
     runs-on: windows-latest
     steps:
     - uses: actions/checkout@v4
@@ -18,33 +19,33 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        python -m pip uninstall PySimpleGUI -y
-        python -m pip cache purge
-        python -m pip install --force-reinstall --extra-index-url https://PySimpleGUI.net/install PySimpleGUI
         pip install zstandard numpy xxhash customtkinter pyyaml mmh3 pyinstaller
         
     - name: Build Windows executables
       run: |
-        pyinstaller --onefile "src\lite.py" --icon="images/restbl.ico" --add-data "checksums/checksums.bin;checksums/" --add-data "images/restbl.ico;images/" --add-data "restbl/*.json;restbl/" --add-data "dic/zsdic;dic/" --add-data "string_lists/*.txt;string_lists/"
-        pyinstaller --onefile "src\restbl.py" --icon="images/restbl.ico" --add-data "checksums/checksums.bin;checksums/" --add-data "images/restbl.ico;images/" --add-data "restbl/*.json;restbl/" --add-data "dic/zsdic;dic/" --add-data "string_lists/*.txt;string_lists/"
+        pyinstaller windows.spec
         
     - name: Create Windows archives
       run: |
         cd dist
-        7z a "RESTBL-Lite-${{ github.event.release.tag_name }}-Windows-x64.zip" "lite.exe"
         7z a "RESTBL-${{ github.event.release.tag_name }}-Windows-x64.zip" "restbl.exe"
-        move *.zip ..
-        cd ..
         
     - name: Upload Windows release assets
+      if: github.event_name == 'release'
       uses: softprops/action-gh-release@v2
       with:
         files: |
-          RESTBL-Lite-${{ github.event.release.tag_name }}-Windows-x64.zip
-          RESTBL-${{ github.event.release.tag_name }}-Windows-x64.zip
+          dist/RESTBL-${{ github.event.release.tag_name }}-Windows-x64.zip
         token: ${{ secrets.GITHUB_TOKEN }}
 
-  build-linux:
+    - name: Upload Windows artifacts
+      if: github.event_name == 'workflow_dispatch'
+      uses: actions/upload-artifact@v3
+      with:
+        name: windows-x64
+        path: dist/RESTBL-dev-Windows-x64.zip
+
+  build-linux-x64:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
@@ -57,28 +58,112 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        python -m pip uninstall PySimpleGUI -y
-        python -m pip cache purge
-        python -m pip install --force-reinstall --extra-index-url https://PySimpleGUI.net/install PySimpleGUI
         pip install zstandard numpy xxhash customtkinter pyyaml mmh3 pyinstaller
         
     - name: Build Linux executables
       run: |
-        pyinstaller --onefile "src/lite.py" --add-data="checksums/checksums.bin:checksums/" --add-data="restbl/*.json:restbl/" --add-data="string_lists/*.txt:string_lists/" --add-data="dic/zsdic:dic/" --add-data="images/restbl.png:images/"
-        pyinstaller --onefile "src/restbl.py" --add-data="checksums/checksums.bin:checksums/" --add-data="restbl/*.json:restbl/" --add-data="string_lists/*.txt:string_lists/" --add-data="dic/zsdic:dic/" --add-data="images/restbl.png:images/"
+        pyinstaller linux.spec
         
     - name: Create Linux archives
       run: |
         cd dist
-        zip "RESTBL-Lite-${{ github.event.release.tag_name }}-Linux-x64.zip" "lite"
         zip "RESTBL-${{ github.event.release.tag_name }}-Linux-x64.zip" "restbl"
-        mv *.zip ..
-        cd ..
         
     - name: Upload Linux release assets
+      if: github.event_name == 'release'
       uses: softprops/action-gh-release@v2
       with:
         files: |
-          RESTBL-Lite-${{ github.event.release.tag_name }}-Linux-x64.zip
-          RESTBL-${{ github.event.release.tag_name }}-Linux-x64.zip
+          dist/RESTBL-${{ github.event.release.tag_name }}-Linux-x64.zip
         token: ${{ secrets.GITHUB_TOKEN }} 
+
+    - name: Upload Linux artifacts
+      if: github.event_name == 'workflow_dispatch'
+      uses: actions/upload-artifact@v3
+      with:
+        name: linux-x64
+        path: dist/RESTBL-dev-Linux-x64.zip
+
+  build-linux-arm64:
+    runs-on: ubuntu-22.04-arm
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python 3.10
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+        
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install zstandard numpy xxhash customtkinter pyyaml mmh3 pyinstaller
+        
+    - name: Build Linux executables
+      run: |
+        pyinstaller linux.spec
+        
+    - name: Create Linux archives
+      run: |
+        cd dist
+        zip "RESTBL-${{ github.event.release.tag_name }}-Linux-arm64.zip" "restbl"
+        
+    - name: Upload Linux release assets
+      if: github.event_name == 'release'
+      uses: softprops/action-gh-release@v2
+      with:
+        files: |
+          dist/RESTBL-${{ github.event.release.tag_name }}-Linux-arm64.zip
+        token: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Upload Linux artifacts
+      if: github.event_name == 'workflow_dispatch'
+      uses: actions/upload-artifact@v3
+      with:
+        name: linux-arm64
+        path: dist/RESTBL-dev-Linux-arm64.zip
+
+  build-linux-arm64-switch:
+    runs-on: ubuntu-22.04-arm
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python 3.10
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+        
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install zstandard numpy xxhash customtkinter pyyaml mmh3 pyinstaller
+        
+    - name: Build Linux executables
+      run: |
+        mkdir build_flags
+        touch build_flags/switch_build.flag
+        pyinstaller linux_switch.spec
+        
+    - name: Create Linux archives
+      run: |
+        mkdir -p tkmm/storage/.config
+        mv dist/restbl tkmm/
+        echo '#!/bin/bash' > tkmm/storage/.config/autostart.sh
+        echo '/flash/tkmm/restbl' >> tkmm/storage/.config/autostart.sh
+        chmod +x tkmm/storage/.config/autostart.sh
+        zip -r "RESTBL-${{ github.event.release.tag_name }}-Linux-arm64-(Switch).zip" tkmm/
+
+    - name: Upload Linux release assets
+      if: github.event_name == 'release'
+      uses: softprops/action-gh-release@v2
+      with:
+        files: |
+          RESTBL-${{ github.event.release.tag_name }}-Linux-arm64-(Switch).zip
+        token: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Upload Linux artifacts
+      if: github.event_name == 'workflow_dispatch'
+      uses: actions/upload-artifact@v3
+      with:
+        name: linux-arm64-switch
+        path: RESTBL-dev-Linux-arm64-(Switch).zip
