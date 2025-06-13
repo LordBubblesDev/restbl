@@ -5,6 +5,9 @@ on:
   release:
     types: [created]
 
+env:
+  VERSION_NAME: ${{ github.event_name == 'release' && github.event.release.tag_name || 'dev' }}
+
 jobs:
   build-windows-x64:
     runs-on: windows-latest
@@ -28,14 +31,14 @@ jobs:
     - name: Create Windows archives
       run: |
         cd dist
-        7z a "RESTBL-${{ github.event.release.tag_name }}-Windows-x64.zip" "restbl.exe"
+        7z a "RESTBL-${{ env.VERSION_NAME }}-Windows-x64.zip" "restbl.exe"
         
     - name: Upload Windows release assets
       if: github.event_name == 'release'
       uses: softprops/action-gh-release@v2
       with:
         files: |
-          dist/RESTBL-${{ github.event.release.tag_name }}-Windows-x64.zip
+          dist/RESTBL-${{ env.VERSION_NAME }}-Windows-x64.zip
         token: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Upload Windows artifacts
@@ -43,7 +46,7 @@ jobs:
       uses: actions/upload-artifact@v3
       with:
         name: windows-x64
-        path: dist/RESTBL-dev-Windows-x64.zip
+        path: dist/RESTBL-${{ env.VERSION_NAME }}-Windows-x64.zip
 
   build-linux-x64:
     runs-on: ubuntu-latest
@@ -67,22 +70,22 @@ jobs:
     - name: Create Linux archives
       run: |
         cd dist
-        zip "RESTBL-${{ github.event.release.tag_name }}-Linux-x64.zip" "restbl"
+        zip "RESTBL-${{ env.VERSION_NAME }}-Linux-x64.zip" "restbl"
         
     - name: Upload Linux release assets
       if: github.event_name == 'release'
       uses: softprops/action-gh-release@v2
       with:
         files: |
-          dist/RESTBL-${{ github.event.release.tag_name }}-Linux-x64.zip
-        token: ${{ secrets.GITHUB_TOKEN }} 
+          dist/RESTBL-${{ env.VERSION_NAME }}-Linux-x64.zip
+        token: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Upload Linux artifacts
       if: github.event_name == 'workflow_dispatch'
       uses: actions/upload-artifact@v3
       with:
         name: linux-x64
-        path: dist/RESTBL-dev-Linux-x64.zip
+        path: dist/RESTBL-${{ env.VERSION_NAME }}-Linux-x64.zip
 
   build-linux-arm64:
     runs-on: ubuntu-22.04-arm
@@ -106,14 +109,14 @@ jobs:
     - name: Create Linux archives
       run: |
         cd dist
-        zip "RESTBL-${{ github.event.release.tag_name }}-Linux-arm64.zip" "restbl"
+        zip "RESTBL-${{ env.VERSION_NAME }}-Linux-arm64.zip" "restbl"
         
     - name: Upload Linux release assets
       if: github.event_name == 'release'
       uses: softprops/action-gh-release@v2
       with:
         files: |
-          dist/RESTBL-${{ github.event.release.tag_name }}-Linux-arm64.zip
+          dist/RESTBL-${{ env.VERSION_NAME }}-Linux-arm64.zip
         token: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Upload Linux artifacts
@@ -121,7 +124,7 @@ jobs:
       uses: actions/upload-artifact@v3
       with:
         name: linux-arm64
-        path: dist/RESTBL-dev-Linux-arm64.zip
+        path: dist/RESTBL-${{ env.VERSION_NAME }}-Linux-arm64.zip
 
   build-linux-arm64-switch:
     runs-on: ubuntu-22.04-arm
@@ -151,14 +154,14 @@ jobs:
         echo '#!/bin/bash' > tkmm/storage/.config/autostart.sh
         echo '/flash/tkmm/restbl' >> tkmm/storage/.config/autostart.sh
         chmod +x tkmm/storage/.config/autostart.sh
-        zip -r "RESTBL-${{ github.event.release.tag_name }}-Linux-arm64-(Switch).zip" tkmm/
-
+        zip -r "RESTBL-${{ env.VERSION_NAME }}-Linux-arm64-(Switch).zip" tkmm/
+        
     - name: Upload Linux release assets
       if: github.event_name == 'release'
       uses: softprops/action-gh-release@v2
       with:
         files: |
-          RESTBL-${{ github.event.release.tag_name }}-Linux-arm64-(Switch).zip
+          RESTBL-${{ env.VERSION_NAME }}-Linux-arm64-(Switch).zip
         token: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Upload Linux artifacts
@@ -166,4 +169,4 @@ jobs:
       uses: actions/upload-artifact@v3
       with:
         name: linux-arm64-switch
-        path: RESTBL-dev-Linux-arm64-(Switch).zip
+        path: RESTBL-${{ env.VERSION_NAME }}-Linux-arm64-(Switch).zip
