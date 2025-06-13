@@ -390,12 +390,11 @@ if __name__ == "__main__":
 
         if args.action == 'merge-mods':
             if args.restbl_path is None:
-                restbl_path = ''  # Set restbl_path to an empty string if it's not provided
+                restbl_path = ''
             else:
                 restbl_path = args.restbl_path
             MergeMods(args.mod_path, restbl_path, version, args.compress, args.delete_existing_restbl, args.use_existing_restbl, args.use_checksums, args.verbose, args.dev_mode)
         elif args.action == 'merge-restbl':
-            # Replace the file browsing dialog with command line arguments
             restbl_path0 = args.restbl_path0
             restbl_path1 = args.restbl_path1
             restbl0 = Restbl(restbl_path0)
@@ -422,10 +421,9 @@ if __name__ == "__main__":
             apply_patches(args.patch_restbl, args.patches_path, compressed=args.compress)
         elif args.action == 'single-mod':
             if args.restbl_path is None:
-                restbl_path = ''  # Set restbl_path to an empty string if it's not provided
+                restbl_path = ''
             else:
                 restbl_path = args.restbl_path
             GenerateRestblFromSingleMod(args.mod_path, restbl_path, version, args.compress, args.use_checksums, args.verbose, args.dev_mode)
     else:
-        # No command-line arguments were passed
         open_tool()

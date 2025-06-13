@@ -13,8 +13,6 @@ import json
 import sys
 import time
 import zstd
-import subprocess
-import shutil
 
 # For pyinstaller relative paths
 def get_correct_path(relative_path):
@@ -946,66 +944,70 @@ def GenerateRestblFromSingleMod(mod_path, restbl_path='', version=141, compresse
         checksums = None
         restbl.clear_cache()
 
-def UpdateRestblTool():
-    version_map = {
-        '1.0.0',
-        '1.1.0',
-        '1.1.1',
-        '1.1.2',
-        '1.2.0',
-        '1.2.1',
-        '1.4.0',
-        '1.4.1'
-    }
-    
-    # Convert RESTBL to JSON
-    totk_path = "F:\\TOTK"
-    latest_version = sorted(list(version_map))[-1]
-    latest_version_without_dots = latest_version.replace('.', '')
-    romfs_path = os.path.join(totk_path, latest_version)
-    restbl_path = os.path.join(romfs_path, "System", "Resource", "ResourceSizeTable.Product." + latest_version_without_dots + ".Nin_NX_NVN.rsizetable.zs")
-    restbl = Restbl(restbl_path)
-    restbl.ConvertToJson(r"F:\dev\restbl-master\restbl\ResourceSizeTable.Product.{}.rsizetable.json".format(latest_version_without_dots))
-    
-    # Run HashCalculator
-    hash_calculator_path = r"F:\dev\Totk.HashCalculator\src\bin\Release\net7.0\Totk.HashCalculator.exe"
-    temp_output_dir = r"F:\dev\restbl-master\string_lists\temp"
-    final_output_dir = r"F:\dev\restbl-master\string_lists"
-    
-    try:
-        subprocess.run([
-            hash_calculator_path,
-            romfs_path,
-            "-v", latest_version,
-            "-o", temp_output_dir
-        ], check=True)
+if __name__ == "__main__":
+    import subprocess
+    import shutil
+
+    def UpdateRestblTool():
+        version_map = {
+            '1.0.0',
+            '1.1.0',
+            '1.1.1',
+            '1.1.2',
+            '1.2.0',
+            '1.2.1',
+            '1.4.0',
+            '1.4.1'
+        }
         
-        temp_file = os.path.join(temp_output_dir, f"string-table-{latest_version}.txt")
-        final_file = os.path.join(final_output_dir, f"{latest_version_without_dots}.txt")
+        # Convert RESTBL to JSON
+        totk_path = "F:\\TOTK"
+        latest_version = sorted(list(version_map))[-1]
+        latest_version_without_dots = latest_version.replace('.', '')
+        romfs_path = os.path.join(totk_path, latest_version)
+        restbl_path = os.path.join(romfs_path, "System", "Resource", "ResourceSizeTable.Product." + latest_version_without_dots + ".Nin_NX_NVN.rsizetable.zs")
+        restbl = Restbl(restbl_path)
+        restbl.ConvertToJson(r"F:\dev\restbl-master\restbl\ResourceSizeTable.Product.{}.rsizetable.json".format(latest_version_without_dots))
         
-        os.makedirs(final_output_dir, exist_ok=True)
-        if os.path.exists(final_file):
-            os.remove(final_file)
-        os.rename(temp_file, final_file)
-        shutil.rmtree(temp_output_dir)
-        print("\n\n")
+        # Run HashCalculator
+        hash_calculator_path = r"F:\dev\Totk.HashCalculator\src\bin\Release\net7.0\Totk.HashCalculator.exe"
+        temp_output_dir = r"F:\dev\restbl-master\string_lists\temp"
+        final_output_dir = r"F:\dev\restbl-master\string_lists"
+        
+        try:
+            subprocess.run([
+                hash_calculator_path,
+                romfs_path,
+                "-v", latest_version,
+                "-o", temp_output_dir
+            ], check=True)
+            
+            temp_file = os.path.join(temp_output_dir, f"string-table-{latest_version}.txt")
+            final_file = os.path.join(final_output_dir, f"{latest_version_without_dots}.txt")
+            
+            os.makedirs(final_output_dir, exist_ok=True)
+            if os.path.exists(final_file):
+                os.remove(final_file)
+            os.rename(temp_file, final_file)
+            shutil.rmtree(temp_output_dir)
+            print("\n\n")
 
-    except Exception as e:
-        print(f"\n\nError during HashCalculator process: {str(e)}")
+        except Exception as e:
+            print(f"\n\nError during HashCalculator process: {str(e)}")
 
-    # Run ChecksumGenerator for all versions
-    checksum_generator_path = r"F:\dev\ModuleSystem.ChecksumGenerator\src\bin\release\net8.0\ModuleSystem.ChecksumGenerator.exe"
-    checksum_output_path = r"F:\dev\restbl-master\checksums\checksums.bin"
-    version_paths = "|".join([f"F:\\TOTK\\{version}" for version in sorted(version_map)])
-    
-    try:
-        subprocess.run([
-            checksum_generator_path,
-            version_paths,
-            "-o", checksum_output_path
-        ], check=True)
-        print("\n\nSuccessfully generated checksums for all versions")
-    except Exception as e:
-        print(f"\n\nError during ChecksumGenerator process: {str(e)}")
+        # Run ChecksumGenerator for all versions
+        checksum_generator_path = r"F:\dev\ModuleSystem.ChecksumGenerator\src\bin\release\net8.0\ModuleSystem.ChecksumGenerator.exe"
+        checksum_output_path = r"F:\dev\restbl-master\checksums\checksums.bin"
+        version_paths = "|".join([f"F:\\TOTK\\{version}" for version in sorted(version_map)])
+        
+        try:
+            subprocess.run([
+                checksum_generator_path,
+                version_paths,
+                "-o", checksum_output_path
+            ], check=True)
+            print("\n\nSuccessfully generated checksums for all versions")
+        except Exception as e:
+            print(f"\n\nError during ChecksumGenerator process: {str(e)}")
 
-#UpdateRestblTool()
+    UpdateRestblTool()
