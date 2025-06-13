@@ -729,6 +729,7 @@ def CalcSize(file, data=None):
                 entry_count = int.from_bytes(data[0x08:0x0C], byteorder='little')
             size += 8 * entry_count
         elif file_extension == '.ainb':
+            signature_count = 0
             if data is None:
                 with open(file, 'rb') as f:
                     f.seek(0x44)
