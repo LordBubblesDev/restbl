@@ -21,7 +21,6 @@ jobs:
         python -m pip uninstall PySimpleGUI -y
         python -m pip cache purge
         python -m pip install --force-reinstall --extra-index-url https://PySimpleGUI.net/install PySimpleGUI
-        python -m pip install -r requirements.txt
         pip install zstandard numpy xxhash customtkinter pyyaml mmh3 pyinstaller
         
     - name: Build Windows executables
@@ -61,7 +60,6 @@ jobs:
         python -m pip uninstall PySimpleGUI -y
         python -m pip cache purge
         python -m pip install --force-reinstall --extra-index-url https://PySimpleGUI.net/install PySimpleGUI
-        python -m pip install -r requirements.txt
         pip install zstandard numpy xxhash customtkinter pyyaml mmh3 pyinstaller
         
     - name: Build Linux executables
