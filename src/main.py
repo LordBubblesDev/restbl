@@ -196,7 +196,8 @@ def open_tool():
         restbl_path0_label.pack(side='left', padx=5)
         restbl_path0_entry = ctk.CTkEntry(master=restbl_path0_container, width=380)
         restbl_path0_entry.pack(side='left', fill='x', expand=True)
-        restbl_path0_browse = ctk.CTkButton(master=restbl_path0_container, text="Browse", width=80, command=lambda: update_entry(restbl_path0_entry))
+        restbl_path0_browse = ctk.CTkButton(master=restbl_path0_container, text="Browse", width=80, 
+            command=lambda: update_file_entry(restbl_path0_entry, [("RESTBL files", "*.rsizetable;*.rsizetable.zs")]))
         restbl_path0_browse.pack(side='right', padx=5)
 
         restbl_path1_container = ctk.CTkFrame(master=merge_restbl_frame)
@@ -205,7 +206,8 @@ def open_tool():
         restbl_path1_label.pack(side='left', padx=5)
         restbl_path1_entry = ctk.CTkEntry(master=restbl_path1_container, width=380)
         restbl_path1_entry.pack(side='left', fill='x', expand=True)
-        restbl_path1_browse = ctk.CTkButton(master=restbl_path1_container, text="Browse", width=80, command=lambda: update_entry(restbl_path1_entry))
+        restbl_path1_browse = ctk.CTkButton(master=restbl_path1_container, text="Browse", width=80, 
+            command=lambda: update_file_entry(restbl_path1_entry, [("RESTBL files", "*.rsizetable;*.rsizetable.zs")]))
         restbl_path1_browse.pack(side='right', padx=5)
 
         merge_restbl_button = ctk.CTkButton(master=advanced_content, text="Merge RESTBLs", command=lambda: [handle_actions(), merge_restbls()])
@@ -224,7 +226,8 @@ def open_tool():
         log_restbl_label.pack(side='left', padx=5)
         log_restbl_entry = ctk.CTkEntry(master=log_restbl_container, width=380)
         log_restbl_entry.pack(side='left', fill='x', expand=True)
-        log_restbl_browse = ctk.CTkButton(master=log_restbl_container, text="Browse", width=80, command=lambda: update_entry(log_restbl_entry))
+        log_restbl_browse = ctk.CTkButton(master=log_restbl_container, text="Browse", width=80, 
+            command=lambda: update_file_entry(log_restbl_entry, [("RESTBL files", "*.rsizetable;*.rsizetable.zs")]))
         log_restbl_browse.pack(side='right', padx=5)
         format_container = ctk.CTkFrame(master=changelog_frame)
         format_container.pack(fill='x', padx=5, pady=(10, 0))
@@ -254,7 +257,8 @@ def open_tool():
         patch_restbl_label.pack(side='left', padx=5)
         patch_restbl_entry = ctk.CTkEntry(master=patch_restbl_container, width=380)
         patch_restbl_entry.pack(side='left', fill='x', expand=True)
-        patch_restbl_browse = ctk.CTkButton(master=patch_restbl_container, text="Browse", width=80, command=lambda: update_entry(patch_restbl_entry))
+        patch_restbl_browse = ctk.CTkButton(master=patch_restbl_container, text="Browse", width=80, 
+            command=lambda: update_file_entry(patch_restbl_entry, [("RESTBL files", "*.rsizetable;*.rsizetable.zs")]))
         patch_restbl_browse.pack(side='right', padx=5)
 
         patches_path_container = ctk.CTkFrame(master=patches_frame)
@@ -321,7 +325,7 @@ def open_tool():
         generate_changelog_button.configure(text="Please wait...", fg_color="#26ac15", text_color="#4f4f4f", state="disabled"), app.update()
         gen_changelog(log_restbl_path, format_combobox.get())
         generate_changelog_button.configure(text="Generate Changelog", fg_color="#1f6aa5", text_color="white", state="normal"), app.update()
-        on_completion()
+        messagebox.showinfo("Success", "The changelog was successfully generated")
 
     def apply_patches_ui():
         patch_restbl = patch_restbl_entry.get()
@@ -342,6 +346,12 @@ def update_entry(entry_widget):
     if directory:
         entry_widget.delete(0, tk.END)
         entry_widget.insert(0, directory)
+
+def update_file_entry(entry_widget, filetypes):
+    file = filedialog.askopenfilename(filetypes=filetypes)
+    if file:
+        entry_widget.delete(0, tk.END)
+        entry_widget.insert(0, file)
 
 if __name__ == "__main__":
     # Check if any command-line arguments were passed
