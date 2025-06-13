@@ -3,7 +3,6 @@ test*
 patches/
 build/
 dist/
-dic/
 *.pyc
 *.json
 *.zs

@@ -26,7 +26,7 @@ class Zstd:
 
         # Load dictionaries only if they haven't been loaded before
         if Zstd.dictionaries is None:
-            zs_dic_path = "dic/ZsDic.pack.zs"
+            zs_dic_path = "dic/zsdic"
             zs_dic_path = get_correct_path(zs_dic_path)
             with open(os.path.join(zs_dic_path), 'rb') as file:
                 data = file.read()
