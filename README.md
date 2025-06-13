@@ -130,6 +130,8 @@ options:
                         (Optional) Path to a RESTBL file to patch when calculating entries for mods
   -ver VERSION, --version VERSION
                         (Optional) TotK version - default: 121
+  -dev, --dev-mode
+                        (Optional) Multiply the calculated sizes by a factor of 1.3 for testing
 
 merge-mods:
   -u, --use-existing-restbl

@@ -220,7 +220,6 @@ class Restbl:
                 string = str(string)
                 rcl.write('- ' + string + '\n')
 
-    # Necessary to apply RCL files as patches
     def GenerateChangelogFromRcl(self, rcl_path):
         changelog = {"Changes" : {}, "Additions" : {}, "Deletions" : {}}
         with open(rcl_path, 'r') as rcl:
@@ -251,7 +250,6 @@ class Restbl:
         with open(filename, 'w') as yaml_patch:
             yaml.dump(patch, yaml_patch, allow_unicode=True, encoding='utf-8', sort_keys=True)
     
-    # Necessary to apply YAML patches
     # YAML patches don't appear to support entry deletion
     def GenerateChangelogFromYaml(self, yaml_path):
         changelog = {"Changes" : {}, "Additions" : {}, "Deletions" : {}}
@@ -451,7 +449,6 @@ def GetInfo(romfs_path, version=None, verbose=False):
                 filepath = os.path.join(os.path.relpath(dirpath, romfs_path), os.path.basename(filepath)).replace('\\', '/')
                 # Check if the file is inside the RSDB folder and if it does not contain the version string
             if 'RSDB' in dirpath and file.endswith('.rstbl.byml.zs'):
-                # Extract the version part of the filename
                 file_version = file.split('.')[-4]  # Assuming the format is always like "Product.120.rstbl.byml"
                 if version_str and file_version != version_str:
                     if verbose:
@@ -524,12 +521,11 @@ def GetInfoWithChecksum(romfs_path, verbose=False, version=None):
             full_path = os.path.join(dir, file)
             filepath = full_path
             if 'RSDB' in dir and file.endswith('.rstbl.byml.zs'):
-                # Extract the version part of the filename
                 file_version = file.split('.')[-4]  # Assuming the format is always like "Product.120.rstbl.byml"
                 if version is not None and file_version != str(version):
                     if verbose:
                         print(f"Ignoring {file} as its version {file_version} does not match the selected version {version}.")
-                    continue  # Skip this file
+                    continue
             if os.path.isfile(filepath):
                 filepath = os.path.join(os.path.relpath(dir, romfs_path), os.path.basename(filepath))
                 filepath = filepath.replace('\\', '/')
@@ -557,7 +553,7 @@ def GetInfoWithChecksum(romfs_path, verbose=False, version=None):
                         add = True
                         if add:
                             info[filepath] = CalcSize(full_path)
-                            if verbose:  # Only print if verbose is True
+                            if verbose:
                                 print(filepath)
                             if os.path.splitext(filepath)[1] == '.pack':
                                 try:
@@ -575,7 +571,7 @@ def GetInfoWithChecksum(romfs_path, verbose=False, version=None):
                                                 add = True
                                         except Exception as e:
                                             print(f"Failed to calculate checksum for {f['Name']} in {filepath}: {str(e)}")
-                                            continue  # Skip this file but continue with others
+                                            continue
 
                                         if add:
                                             try:
@@ -601,7 +597,7 @@ def GetInfoList(mod_path):
         files[mod] = GetInfo(os.path.join(mod_path, mod) + "/romfs")
     return files
 
-# These are estimates, would be nice to have more precise values
+# These are estimates for some file types, would be nice to have more precise values
 def CalcSize(file, data=None):
     if data is None:
         with open(file, 'rb') as f:
@@ -642,7 +638,7 @@ def CalcSize(file, data=None):
     if is_shader_archive:
         size += 3712
     
-    # Add specific size differences for each file type
+    # Specific size differences for each file type
     size_diff_map = {
         '.ainb': 392,  # + exb allocations, handled separately below
         '.asb': 552,  # +40 per node, handled separately below
@@ -834,7 +830,7 @@ def merge_mods(mod_path=None, use_existing_restbl=False, restbl_path=None, versi
     if not version:
         version = input("Enter the version: ")
     if not restbl_path:
-        restbl_path = ''  # Set restbl_path to an empty string if it's not provided
+        restbl_path = ''
     return mod_path, restbl_path, version
 
 # Generates changelogs for the two RESTBL files to merge
@@ -864,7 +860,7 @@ def apply_patches(patch_restbl, patches_path, compressed=True):
     restbl = Restbl(patch_restbl)
     print("Analyzing patches...")
     patches = [i for i in os.listdir(patches_path) if os.path.isfile(os.path.join(patches_path, i)) and os.path.splitext(i)[1].lower() in ['.json', '.yml', '.yaml', '.rcl']]
-    print("Found patches:", patches)  # Add this line for debug information
+    print("Found patches:", patches)
     changelogs = []
     for patch in patches:
         match os.path.splitext(patch)[1].lower():
