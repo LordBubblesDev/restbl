@@ -902,8 +902,7 @@ def GenerateRestblFromSingleMod(mod_path, restbl_path='', version=141, compresse
             directory = os.path.join(mod_path, "romfs", "System", "Resource")
             os.makedirs(directory, exist_ok=True)
             suffix = '.Nin_NX_NVN' if version >= 140 else ''
-            filename = os.path.join(directory, 'ResourceSizeTable.Product.' + str(version).replace('.', '') + suffix + '.rsizetable')
-            filename = filename.replace("/", "\\")
+            filename = os.path.join(directory, f'ResourceSizeTable.Product.{str(version).replace(".", "")}{suffix}.rsizetable')
             with open(filename, 'wb') as file:
                 buffer = WriteStream(file)
                 buffer.write("RESTBL".encode('utf-8'))
@@ -937,6 +936,9 @@ def GenerateRestblFromSingleMod(mod_path, restbl_path='', version=141, compresse
         execution_time = end_time - start_time
         print(f"All calculations were executed in {execution_time} seconds")
         print("RESTBL saved at:", filename)
+    except Exception as e:
+        print(f"Error: {str(e)}")
+        raise
     finally:
         global index_cache, checksums
         index_cache = None
