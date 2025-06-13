@@ -43,7 +43,7 @@ jobs:
 
     - name: Upload Windows artifacts
       if: github.event_name == 'workflow_dispatch'
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: windows-x64
         path: dist/RESTBL-${{ env.VERSION_NAME }}-Windows-x64.zip
@@ -82,7 +82,7 @@ jobs:
 
     - name: Upload Linux artifacts
       if: github.event_name == 'workflow_dispatch'
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: linux-x64
         path: dist/RESTBL-${{ env.VERSION_NAME }}-Linux-x64.zip
@@ -121,7 +121,7 @@ jobs:
 
     - name: Upload Linux artifacts
       if: github.event_name == 'workflow_dispatch'
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: linux-arm64
         path: dist/RESTBL-${{ env.VERSION_NAME }}-Linux-arm64.zip
@@ -166,7 +166,7 @@ jobs:
 
     - name: Upload Linux artifacts
       if: github.event_name == 'workflow_dispatch'
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: linux-arm64-switch
         path: RESTBL-${{ env.VERSION_NAME }}-Linux-arm64-(Switch).zip
