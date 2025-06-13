@@ -18,7 +18,7 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install zstandard numpy xxhash customtkinter pyyaml mmh3 pyinstaller
+        pip install zstandard numpy xxhash customtkinter pyyaml mmh3 pyinstaller pysimplegui
         
     - name: Build Windows executables
       run: |
@@ -27,8 +27,9 @@ jobs:
         
     - name: Create Windows archives
       run: |
-        7z a "RESTBL-Lite-${{ github.event.release.tag_name }}-Windows-x64.zip" "dist/lite.exe"
-        7z a "RESTBL-${{ github.event.release.tag_name }}-Windows-x64.zip" "dist/restbl.exe"
+        move dist\*.exe .
+        7z a "RESTBL-Lite-${{ github.event.release.tag_name }}-Windows-x64.zip" "lite.exe"
+        7z a "RESTBL-${{ github.event.release.tag_name }}-Windows-x64.zip" "restbl.exe"
         
     - name: Upload Windows release assets
       uses: softprops/action-gh-release@v2
@@ -51,7 +52,7 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install zstandard numpy xxhash customtkinter pyyaml mmh3 pyinstaller
+        pip install zstandard numpy xxhash customtkinter pyyaml mmh3 pyinstaller pysimplegui
         
     - name: Build Linux executables
       run: |
@@ -60,8 +61,9 @@ jobs:
         
     - name: Create Linux archives
       run: |
-        zip "RESTBL-Lite-${{ github.event.release.tag_name }}-Linux-x64.zip" "dist/lite"
-        zip "RESTBL-${{ github.event.release.tag_name }}-Linux-x64.zip" "dist/restbl"
+        mv dist/* .
+        zip "RESTBL-Lite-${{ github.event.release.tag_name }}-Linux-x64.zip" "lite"
+        zip "RESTBL-${{ github.event.release.tag_name }}-Linux-x64.zip" "restbl"
         
     - name: Upload Linux release assets
       uses: softprops/action-gh-release@v2
