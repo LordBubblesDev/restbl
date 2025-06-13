@@ -24,7 +24,7 @@ jobs:
         python -m pip install --upgrade pip
         pip install zstandard numpy xxhash customtkinter pyyaml mmh3 pyinstaller
         
-    - name: Build Windows executables
+    - name: Build Windows executable
       run: |
         pyinstaller windows.spec
         
@@ -63,7 +63,7 @@ jobs:
         python -m pip install --upgrade pip
         pip install zstandard numpy xxhash customtkinter pyyaml mmh3 pyinstaller
         
-    - name: Build Linux executables
+    - name: Build Linux executable
       run: |
         pyinstaller linux.spec
         
@@ -102,7 +102,7 @@ jobs:
         python -m pip install --upgrade pip
         pip install zstandard numpy xxhash customtkinter pyyaml mmh3 pyinstaller
         
-    - name: Build Linux executables
+    - name: Build Linux executable
       run: |
         pyinstaller linux.spec
         
@@ -141,7 +141,7 @@ jobs:
         python -m pip install --upgrade pip
         pip install zstandard numpy xxhash customtkinter pyyaml mmh3 pyinstaller
         
-    - name: Build Linux executables
+    - name: Build Linux Switch executable
       run: |
         mkdir build_flags
         touch build_flags/switch_build.flag
