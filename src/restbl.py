@@ -14,6 +14,8 @@ import sys
 import argparse
 import time
 import zstd
+import subprocess
+import shutil
 
 def welcome():
     return """
@@ -398,6 +400,20 @@ class Restbl:
     def clear_cache(self):
         self._load_json_file.cache_clear()
 
+    def ConvertToJson(self, output_path=''):
+        if not output_path:
+            output_path = os.path.splitext(self.filename)[0] + '.json'
+            
+        json_data = {
+            "Hash Table": self.hash_table,
+            "Collision Table": self.collision_table
+        }
+        
+        with open(output_path, 'w') as f:
+            json.dump(json_data, f, indent=4)
+            
+        print(f"Converted RESTBL to JSON: {output_path}")
+
 # List of all files in a directory
 def GetStringList(romfs_path):
     paths = []
@@ -503,7 +519,7 @@ def get_checksum(path, filechecksum):
         checksums = dict(zip(first_half, second_half))
         index_cache = {k: v for v, k in enumerate(first_half)}
 
-    versions = ["140", "121", "120", "112", "111", "110", ""]
+    versions = ["141", "140", "121", "120", "112", "111", "110", ""]
     for version in versions:
         key = xxhash.xxh64_intdigest((path + ('#' + version if version else '')).encode(encoding='UTF-16-LE', errors='strict'))
         if key in index_cache and checksums[key] == filechecksum:
@@ -779,7 +795,7 @@ def MergeChangelogs(changelogs):
     return changelog
 
 # Analyzes a directory of mods, generates a combined changelog, and generates a RESTBL from it
-def MergeMods(mod_path, restbl_path='', version=140, compressed=True, delete=False, smart_analysis=True, checksum=False, verbose=False):
+def MergeMods(mod_path, restbl_path='', version=141, compressed=True, delete=False, smart_analysis=True, checksum=False, verbose=False):
     try:
         start_time = time.time()
         directory = os.path.join(mod_path, "00_MERGED_RESTBL", "romfs", "System", "Resource")
@@ -891,7 +907,7 @@ def apply_patches(patch_restbl, patches_path, compressed=True):
             file.write(compressor.compress(data))
     print("Finished")
 
-def GenerateRestblFromSingleMod(mod_path, restbl_path='', version=140, compressed=True, checksum=False, verbose=False):
+def GenerateRestblFromSingleMod(mod_path, restbl_path='', version=141, compressed=True, checksum=False, verbose=False):
     try:
         start_time = time.time()
         if not(os.path.exists(restbl_path)):
@@ -940,7 +956,48 @@ def GenerateRestblFromSingleMod(mod_path, restbl_path='', version=140, compresse
         checksums = None
         restbl.clear_cache()
 
+def UpdateRestblTool():
+    # Convert RESTBL to JSON
+    totk_path = "F:/TOTK"
+    romfs_version = "1.4.1"
+    romfs_version_without_dots = romfs_version.replace('.', '')
+    romfs_path = os.path.join(totk_path, romfs_version)
+    restbl_path = os.path.join(romfs_path, "System", "Resource", "ResourceSizeTable.Product." + romfs_version_without_dots + ".Nin_NX_NVN.rsizetable.zs")
+    restbl = Restbl(restbl_path)
+    restbl.ConvertToJson(r"F:\dev\restbl-master\restbl\ResourceSizeTable.Product.{}.rsizetable.json".format(romfs_version_without_dots))
+    
+    # Run HashCalculator
+    hash_calculator_path = r"F:\dev\Totk.HashCalculator\src\bin\Release\net7.0\Totk.HashCalculator.exe"
+    temp_output_dir = r"F:\dev\restbl-master\string_lists\temp"
+    final_output_dir = r"F:\dev\restbl-master\string_lists"
+    
+    try:
+        subprocess.run([
+            hash_calculator_path,
+            romfs_path,
+            "-v", romfs_version,
+            "-o", temp_output_dir
+        ], check=True)
+        
+        temp_file = os.path.join(temp_output_dir, f"string-table-{romfs_version}.txt")
+        final_file = os.path.join(final_output_dir, f"{romfs_version_without_dots}.txt")
+        
+        if os.path.exists(temp_file):
+            os.makedirs(final_output_dir, exist_ok=True)
+            if os.path.exists(final_file):
+                os.remove(final_file)
+            os.rename(temp_file, final_file)
+        
+        if os.path.exists(temp_output_dir):
+            shutil.rmtree(temp_output_dir)
+            
+    except Exception as e:
+        print(f"Error during HashCalculator process: {str(e)}")
+
 def open_tool():
+
+    # UpdateRestblTool()
+
     # GUI version
     print(welcome())
     import PySimpleGUI as sg
@@ -955,6 +1012,7 @@ def open_tool():
         '1.2.0': 120,
         '1.2.1': 121,
         '1.4.0': 140,
+        '1.4.1': 141,
     }
     layout = [
         [
@@ -967,7 +1025,7 @@ def open_tool():
                     [sg.Text(' ', size=(6, 1)),  # Empty text element to create offset
                     sg.Checkbox(default=True, text='Use Checksums', size=(12,5), key='use_checksums'),
                     sg.Checkbox(default=False, text='Verbose', size=(8,5), key='verbose'),
-                    sg.Text('Version:'), sg.Combo(list(version_map.keys()), default_value='1.4.0', key='version', readonly=True)],
+                    sg.Text('Version:'), sg.Combo(list(version_map.keys()), default_value='1.4.1', key='version', readonly=True)],
                     [sg.Text(' ', size=(6, 1)),  # Empty text element to create offset
                     sg.Checkbox(default=False, text='Patch existing RESTBL', key='patch_existing', size=(20, 1)),
                     sg.Checkbox('Dev Mode', default=False, key='dev_mode')]
@@ -1154,7 +1212,7 @@ if __name__ == "__main__":
         parser.add_argument('-cs', '--use-checksums', action='store_true', help='[Recommended] Use checksums')
         parser.add_argument('-m', '--mod-path', type=str, help='Mandatory for actions "merge-mods" and "single-mod"')
         parser.add_argument('-r', '--restbl-path', type=str, help='(Optional) Path to a RESTBL file to patch when calculating entries for mods')
-        parser.add_argument('-ver', '--version', type=int, default=140, help='(Optional) TotK version - default: 140')
+        parser.add_argument('-ver', '--version', type=int, default=141, help='(Optional) TotK version - default: 141')
 
         # Arguments for 'merge-mods' action
         merge_mods_group = parser.add_argument_group('merge-mods')

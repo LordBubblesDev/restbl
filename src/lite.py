@@ -418,7 +418,7 @@ def get_checksum(path, filechecksum):
         checksums = dict(zip(first_half, second_half))
         index_cache = {k: v for v, k in enumerate(first_half)}
 
-    versions = ["140", "121", "120", "112", "111", "110", ""]
+    versions = ["141", "140", "121", "120", "112", "111", "110", ""]
     for version in versions:
         key = xxhash.xxh64_intdigest((path + ('#' + version if version else '')).encode(encoding='UTF-16-LE', errors='strict'))
         if key in index_cache and checksums[key] == filechecksum:
@@ -693,7 +693,7 @@ def MergeChangelogs(changelogs):
     return changelog
 
 # Analyzes a directory of mods, generates a combined changelog, and generates a RESTBL from it
-def MergeMods(mod_path, restbl_path='', version=140, compressed=True, delete=False, smart_analysis=True, checksum=False, verbose=False):
+def MergeMods(mod_path, restbl_path='', version=141, compressed=True, delete=False, smart_analysis=True, checksum=False, verbose=False):
     try:
         start_time = time.time()
         directory = os.path.join(mod_path, "00_MERGED_RESTBL", "romfs", "System", "Resource")
@@ -751,7 +751,7 @@ def merge_mods(mod_path=None, use_existing_restbl=False, restbl_path=None, versi
         restbl_path = ''  # Set restbl_path to an empty string if it's not provided
     return mod_path, restbl_path, version
 
-def GenerateRestblFromSingleMod(mod_path, restbl_path='', version=140, compressed=True, checksum=False, verbose=False):
+def GenerateRestblFromSingleMod(mod_path, restbl_path='', version=141, compressed=True, checksum=False, verbose=False):
     try:
         start_time = time.time()
         if not(os.path.exists(restbl_path)):
@@ -852,6 +852,7 @@ def open_tool():
         '1.2.0': 120,
         '1.2.1': 121,
         '1.4.0': 140,
+        '1.4.1': 141,
     }
 
     # Options Frame
@@ -879,7 +880,7 @@ def open_tool():
     version_label.grid(row=2, column=0, padx=10, pady=5, sticky='nsew')
     version_combobox = ctk.CTkComboBox(master=options_frame, values=list(version_map.keys()), width=50, state="readonly")
     version_combobox.grid(row=2, column=1, padx=5, pady=5, sticky='nsew')
-    version_combobox.set("1.4.0")
+    version_combobox.set("1.4.1")
 
     # Set column configurations to distribute space evenly
     options_frame.grid_columnconfigure(0, weight=1)
@@ -949,7 +950,7 @@ if __name__ == "__main__":
         parser.add_argument('-cs', '--use-checksums', action='store_true', help='[Recommended] Use checksums')
         parser.add_argument('-m', '--mod-path', type=str, help='Mandatory for actions "merge-mods" and "single-mod"')
         parser.add_argument('-r', '--restbl-path', type=str, help='(Optional) Path to a RESTBL file to patch when calculating entries for mods')
-        parser.add_argument('-ver', '--version', type=int, default=140, help='(Optional) TotK version - default: 140')
+        parser.add_argument('-ver', '--version', type=int, default=141, help='(Optional) TotK version - default: 141')
 
         # Arguments for 'merge-mods' action
         merge_mods_group = parser.add_argument_group('merge-mods')
