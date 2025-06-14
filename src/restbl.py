@@ -146,6 +146,32 @@ class Restbl:
                 self.hashmap[binascii.crc32(path.encode('utf-8'))] = path
         return self.hashmap
 
+    def _GenerateHashmapWithMod(self, mod_path=None):
+        # First load the base string list
+        version = os.path.basename(self.filename).split('.')[2]
+        string_list = "string_lists/" + version.replace('.', '') + ".txt"
+        string_list = get_correct_path(string_list)
+        paths = []
+        
+        # Load base strings
+        with open(string_list, 'r') as strings:
+            for line in strings:
+                paths.append(line[:-1])
+        
+        # If mod path is provided, add its strings
+        if mod_path and os.path.isdir(mod_path):
+            mod_strings = GetStringList(os.path.join(mod_path, 'romfs'))
+            paths.extend(mod_strings)
+        
+        # Remove duplicates while preserving order
+        paths = list(dict.fromkeys(paths))
+        
+        # Generate hashmap
+        for path in paths:
+            if path not in self.collision_table:
+                self.hashmap[binascii.crc32(path.encode('utf-8'))] = path
+        return self.hashmap
+
     # Returns all modified entries
     @staticmethod
     def _DictCompareChanges(edited, original):
@@ -182,11 +208,15 @@ class Restbl:
             return hash
 
     # Changelog comparing to the vanilla file
-    def GenerateChangelog(self):
+    def GenerateChangelog(self, mod_path=None):
         original_filepath = "restbl/ResourceSizeTable.Product." + self.game_version + ".rsizetable.json"
         original_filepath = get_correct_path(original_filepath)
         with open(original_filepath, 'r') as file:
             original = json.load(file, object_pairs_hook=lambda d: {int(k) if k.isdigit() else k: v for k, v in d})
+        
+        # Generate hashmap with mod strings if provided
+        self._GenerateHashmapWithMod(mod_path)
+        
         changes = self._GetCombinedChanges(original, self._DictCompareChanges)
         additions = self._GetCombinedChanges(original, self._DictCompareAdditions)
         deletions = self._GetCombinedChanges(original, self._DictCompareDeletions)
@@ -194,10 +224,10 @@ class Restbl:
         return changelog
 
     # RCL files for NX-Editor
-    def GenerateRcl(self, filename=''):
-        changelog = self.GenerateChangelog()
+    def GenerateRcl(self, filename='', mod_path=None):
+        changelog = self.GenerateChangelog(mod_path)
         if self.hashmap == {}:
-            self._GenerateHashmap()
+            self._GenerateHashmapWithMod(mod_path)
         if filename == "":
             filename = "changes.rcl"
         with open(filename, 'w') as rcl:
@@ -234,12 +264,12 @@ class Restbl:
                         changelog["Deletions"][entry[0].lstrip("*+- ").rstrip("= ")] = 0
         return changelog
 
-    def GenerateYamlPatch(self, filename=''):
-        changelog = self.GenerateChangelog()
+    def GenerateYamlPatch(self, filename='', mod_path=None):
+        changelog = self.GenerateChangelog(mod_path)
         if filename == "":
             filename = "changes.yml"
         if self.hashmap == {}:
-            self._GenerateHashmap()
+            self._GenerateHashmapWithMod(mod_path)
         patch = {}
         for change in changelog["Changes"]:
             patch[self._TryGetPath(change, self.hashmap)] = changelog["Changes"][change]
@@ -840,17 +870,17 @@ def merge_restbl(restbl_path0, restbl_path1):
     return restbl0.GenerateChangelog(), restbl1.GenerateChangelog(), restbl0
 
 # Generates a changelog in the specified format
-def gen_changelog(restbl_path, format):
+def gen_changelog(restbl_path, format, mod_path=None):
     restbl = Restbl(restbl_path)
     print("Generating changelog...")
     if format == 'json':
-        changelog = restbl.GenerateChangelog()
+        changelog = restbl.GenerateChangelog(mod_path)
         with open('changelog.json', 'w') as f:
             json.dump(changelog, f, indent=4)
     elif format == 'rcl':
-        restbl.GenerateRcl()
+        restbl.GenerateRcl(mod_path=mod_path)
     elif format == 'yaml':
-        restbl.GenerateYamlPatch()
+        restbl.GenerateYamlPatch(mod_path=mod_path)
     else:
         raise ValueError("Invalid format. Choose between 'json', 'rcl', or 'yaml'.")
     print("Finished")

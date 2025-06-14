@@ -229,6 +229,18 @@ def open_tool():
         log_restbl_browse = ctk.CTkButton(master=log_restbl_container, text="Browse", width=80, 
             command=lambda: update_file_entry(log_restbl_entry, [("RESTBL files", "*.rsizetable;*.rsizetable.zs")]))
         log_restbl_browse.pack(side='right', padx=5)
+
+        # Add new container for optional mod folder
+        mod_strings_container = ctk.CTkFrame(master=changelog_frame)
+        mod_strings_container.pack(fill='x', padx=5)
+        mod_strings_label = ctk.CTkLabel(master=mod_strings_container, text="Optional Mod Folder for Strings:", width=120)
+        mod_strings_label.pack(side='left', padx=5)
+        mod_strings_entry = ctk.CTkEntry(master=mod_strings_container, width=380)
+        mod_strings_entry.pack(side='left', fill='x', expand=True)
+        mod_strings_browse = ctk.CTkButton(master=mod_strings_container, text="Browse", width=80, 
+            command=lambda: update_entry(mod_strings_entry))
+        mod_strings_browse.pack(side='right', padx=5)
+
         format_container = ctk.CTkFrame(master=changelog_frame)
         format_container.pack(fill='x', padx=5, pady=(10, 0))
         format_center_container = ctk.CTkFrame(master=format_container)
@@ -318,12 +330,13 @@ def open_tool():
 
     def generate_changelog():
         log_restbl_path = log_restbl_entry.get()
+        mod_strings_path = mod_strings_entry.get()
         if not (os.path.isfile(log_restbl_path) and 
                 (log_restbl_path.endswith(('.rsizetable', '.rsizetable.zs')))):
             messagebox.showerror("Error", "Please select a valid RESTBL file")
             return
         generate_changelog_button.configure(text="Please wait...", fg_color="#26ac15", text_color="#4f4f4f", state="disabled"), app.update()
-        gen_changelog(log_restbl_path, format_combobox.get())
+        gen_changelog(log_restbl_path, format_combobox.get(), mod_strings_path if mod_strings_path else None)
         generate_changelog_button.configure(text="Generate Changelog", fg_color="#1f6aa5", text_color="white", state="normal"), app.update()
         messagebox.showinfo("Success", "The changelog was successfully generated")
 
@@ -381,6 +394,7 @@ if __name__ == "__main__":
         gen_changelog_group = parser.add_argument_group('generate-changelog')
         gen_changelog_group.add_argument('-l', '--log-restbl-path', type=str, help='(Mandatory) Path to the RESTBL file for generating changelog')
         gen_changelog_group.add_argument('-f', '--format', choices=['json', 'rcl', 'yaml'], help='(Mandatory) Format of the changelog')
+        gen_changelog_group.add_argument('-m', '--mod-path', type=str, help='(Optional) Path to a mod folder to include its strings in the changelog')
 
         # Arguments for 'apply-patches' action
         apply_patches_group = parser.add_argument_group('apply-patches')
@@ -418,7 +432,7 @@ if __name__ == "__main__":
                     file.write(compressor.compress(data))
             print("Finished")
         elif args.action == 'generate-changelog':
-            gen_changelog(args.log_restbl_path, args.format)
+            gen_changelog(args.log_restbl_path, args.format, args.mod_path)
         elif args.action == 'apply-patches':
             apply_patches(args.patch_restbl, args.patches_path, compressed=args.compress)
         elif args.action == 'single-mod':
