@@ -394,7 +394,7 @@ if __name__ == "__main__":
         gen_changelog_group = parser.add_argument_group('generate-changelog')
         gen_changelog_group.add_argument('-l', '--log-restbl-path', type=str, help='(Mandatory) Path to the RESTBL file for generating changelog')
         gen_changelog_group.add_argument('-f', '--format', choices=['json', 'rcl', 'yaml'], help='(Mandatory) Format of the changelog')
-        gen_changelog_group.add_argument('-m', '--mod-path', type=str, help='(Optional) Path to a mod folder to include its strings in the changelog')
+        gen_changelog_group.add_argument('-s', '--strings-mod-path', type=str, help='(Optional) Path to a mod folder to include its strings in the changelog')
 
         # Arguments for 'apply-patches' action
         apply_patches_group = parser.add_argument_group('apply-patches')
@@ -432,7 +432,7 @@ if __name__ == "__main__":
                     file.write(compressor.compress(data))
             print("Finished")
         elif args.action == 'generate-changelog':
-            gen_changelog(args.log_restbl_path, args.format, args.mod_path)
+            gen_changelog(args.log_restbl_path, args.format, args.strings_mod_path)
         elif args.action == 'apply-patches':
             apply_patches(args.patch_restbl, args.patches_path, compressed=args.compress)
         elif args.action == 'single-mod':
