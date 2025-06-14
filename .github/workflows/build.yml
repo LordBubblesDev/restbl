@@ -154,14 +154,14 @@ jobs:
         echo '#!/bin/bash' > tkmm/storage/.config/autostart.sh
         echo '/flash/tkmm/restbl' >> tkmm/storage/.config/autostart.sh
         chmod +x tkmm/storage/.config/autostart.sh
-        zip -r "RESTBL-${{ env.VERSION_NAME }}-Linux-arm64-(Switch).zip" tkmm/
+        zip -r "RESTBL-${{ env.VERSION_NAME }}-Linux-arm64-Switch.zip" tkmm/
         
     - name: Upload Linux release assets
       if: github.event_name == 'release'
       uses: softprops/action-gh-release@v2
       with:
         files: |
-          RESTBL-${{ env.VERSION_NAME }}-Linux-arm64-(Switch).zip
+          RESTBL-${{ env.VERSION_NAME }}-Linux-arm64-Switch.zip
         token: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Upload Linux artifacts
@@ -169,4 +169,4 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: linux-arm64-switch
-        path: RESTBL-${{ env.VERSION_NAME }}-Linux-arm64-(Switch).zip
+        path: RESTBL-${{ env.VERSION_NAME }}-Linux-arm64-Switch.zip
