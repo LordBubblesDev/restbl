@@ -12,6 +12,7 @@ a = Analysis(
         ('string_lists/*.txt', 'string_lists/'),
         ('dic/zsdic', 'dic/'),
         ('images/restbl.png', 'images/'),
+        ('build_flags/*.flag', 'build_flags/'),
     ],
     hiddenimports=[],
     hookspath=[],

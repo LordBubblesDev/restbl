@@ -12,6 +12,7 @@ a = Analysis(
         ('restbl/*.json', 'restbl/'),
         ('dic/zsdic', 'dic/'),
         ('string_lists/*.txt', 'string_lists/'),
+        ('build_flags/*.flag', 'build_flags/'),
     ],
     hiddenimports=[],
     hookspath=[],

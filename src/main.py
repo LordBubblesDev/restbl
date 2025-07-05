@@ -21,6 +21,13 @@ try:
 except:
     pass
 
+APP_VERSION = "2.0.0"
+try:
+    with open(get_correct_path('build_flags/version.flag'), 'r') as f:
+        APP_VERSION = f.read().strip()
+except:
+    pass
+
 def welcome():
     return """
               / \\\\
@@ -42,7 +49,7 @@ if IS_SWITCH_BUILD:
 
 def open_tool():
     app = ctk.CTk()
-    app.title('RESTBL Calculator 2.0.0')
+    app.title(f'RESTBL Calculator {APP_VERSION}')
     if os.name == 'nt':
         app.iconbitmap(images)
     else:
@@ -83,6 +90,7 @@ def open_tool():
         '1.2.1': 121,
         '1.4.0': 140,
         '1.4.1': 141,
+        '1.4.2': 142,
     }
 
     # Options Frame
@@ -116,7 +124,7 @@ def open_tool():
     version_label.pack(side='left', padx=(0, 5))
     version_combobox = ctk.CTkComboBox(master=version_elements, values=list(version_map.keys()), width=100, state="readonly")
     version_combobox.pack(side='left')
-    version_combobox.set("1.4.1")
+    version_combobox.set("1.4.2")
 
     # Set column configurations to distribute space evenly
     options_frame.grid_columnconfigure(0, weight=1)
@@ -378,7 +386,7 @@ if __name__ == "__main__":
         parser.add_argument('-cs', '--use-checksums', action='store_true', help='[Recommended] Use checksums')
         parser.add_argument('-m', '--mod-path', type=str, help='Mandatory for actions "merge-mods" and "single-mod"')
         parser.add_argument('-r', '--restbl-path', type=str, help='(Optional) Path to a RESTBL file to patch when calculating entries for mods')
-        parser.add_argument('-ver', '--version', type=int, default=141, help='(Optional) TotK version - default: 141')
+        parser.add_argument('-ver', '--version', type=int, default=142, help='(Optional) TotK version - default: 142')
 
         # Arguments for 'merge-mods' action
         merge_mods_group = parser.add_argument_group('merge-mods')

@@ -6,7 +6,7 @@ on:
     types: [created]
 
 env:
-  VERSION_NAME: ${{ github.event_name == 'release' && github.event.release.tag_name || 'dev' }}
+  VERSION_NAME: ${{ github.event_name == 'release' && github.event.release.tag_name || '[dev-version]' }}
 
 jobs:
   build-windows-x64:
@@ -26,6 +26,8 @@ jobs:
         
     - name: Build Windows executable
       run: |
+        mkdir build_flags
+        echo ${{ env.VERSION_NAME }} > build_flags/version.flag
         pyinstaller windows.spec
         
     - name: Create Windows archives
@@ -65,6 +67,8 @@ jobs:
         
     - name: Build Linux executable
       run: |
+        mkdir build_flags
+        echo ${{ env.VERSION_NAME }} > build_flags/version.flag
         pyinstaller linux.spec
         
     - name: Create Linux archives
@@ -104,6 +108,8 @@ jobs:
         
     - name: Build Linux executable
       run: |
+        mkdir build_flags
+        echo ${{ env.VERSION_NAME }} > build_flags/version.flag
         pyinstaller linux.spec
         
     - name: Create Linux archives
@@ -145,6 +151,7 @@ jobs:
       run: |
         mkdir build_flags
         touch build_flags/switch_build.flag
+        echo ${{ env.VERSION_NAME }} > build_flags/version.flag
         pyinstaller linux_switch.spec
         
     - name: Create Linux archives

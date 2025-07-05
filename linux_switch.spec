@@ -7,7 +7,7 @@ a = Analysis(
     pathex=[],
     binaries=[],
     datas=[
-        ('build_flags/switch_build.flag', 'build_flags/'),
+        ('build_flags/*.flag', 'build_flags/'),
         ('checksums/checksums.bin', 'checksums/'),
         ('restbl/*.json', 'restbl/'),
         ('string_lists/*.txt', 'string_lists/'),
