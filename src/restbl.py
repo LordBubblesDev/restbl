@@ -207,10 +207,24 @@ class Restbl:
         else:
             return hash
 
+    def _SortChangelog(self, changelog):
+        def sort_key(item):
+            key, value = item
+            if isinstance(key, int):
+                return f"{key:010d}"
+            return str(key)
+        
+        sorted_changelog = {}
+        for key in ["Changes", "Additions", "Deletions"]:
+            if key in changelog:
+                sorted_changelog[key] = dict(sorted(changelog[key].items(), key=sort_key))
+        return sorted_changelog
+
     # Changelog comparing to the vanilla file
     def GenerateChangelog(self, mod_path=None):
         original_filepath = "restbl/ResourceSizeTable.Product." + self.game_version + ".rsizetable.json"
         original_filepath = get_correct_path(original_filepath)
+        print(f"Loading original RESTBL from: {original_filepath}")
         with open(original_filepath, 'r') as file:
             original = json.load(file, object_pairs_hook=lambda d: {int(k) if k.isdigit() else k: v for k, v in d})
         
@@ -221,7 +235,8 @@ class Restbl:
         additions = self._GetCombinedChanges(original, self._DictCompareAdditions)
         deletions = self._GetCombinedChanges(original, self._DictCompareDeletions)
         changelog = {"Changes" : changes, "Additions" : additions, "Deletions" : deletions}
-        return changelog
+        print(f"Raw changelog: {len(changes)} changes, {len(additions)} additions, {len(deletions)} deletions")
+        return self._SortChangelog(changelog)
 
     # RCL files for NX-Editor
     def GenerateRcl(self, filename='', mod_path=None):
@@ -231,19 +246,19 @@ class Restbl:
         if filename == "":
             filename = "changes.rcl"
         with open(filename, 'w') as rcl:
-            for change in changelog["Changes"]:
+            for change in sorted(changelog["Changes"].keys()):
                 string = self._TryGetPath(change, self.hashmap)
                 if type(string) == int:
                     string = hex(string)
                 string = str(string)
                 rcl.write('* ' + string + ' = ' + str(changelog["Changes"][change]) + '\n')
-            for change in changelog["Additions"]:
+            for change in sorted(changelog["Additions"].keys()):
                 string = self._TryGetPath(change, self.hashmap)
                 if type(string) == int:
                     string = hex(string)
                 string = str(string)
                 rcl.write('+ ' + string + ' = ' + str(changelog["Additions"][change]) + '\n')
-            for change in changelog["Deletions"]:
+            for change in sorted(changelog["Deletions"].keys()):
                 string = self._TryGetPath(change, self.hashmap)
                 if type(string) == int:
                     string = hex(string)
@@ -271,11 +286,11 @@ class Restbl:
         if self.hashmap == {}:
             self._GenerateHashmapWithMod(mod_path)
         patch = {}
-        for change in changelog["Changes"]:
+        for change in sorted(changelog["Changes"].keys()):
             patch[self._TryGetPath(change, self.hashmap)] = changelog["Changes"][change]
-        for addition in changelog["Additions"]:
+        for addition in sorted(changelog["Additions"].keys()):
             patch[self._TryGetPath(addition, self.hashmap)] = changelog["Additions"][addition]
-        for deletion in changelog["Deletions"]:
+        for deletion in sorted(changelog["Deletions"].keys()):
             patch[self._TryGetPath(deletion, self.hashmap)] = 0
         with open(filename, 'w') as yaml_patch:
             yaml.dump(patch, yaml_patch, allow_unicode=True, encoding='utf-8', sort_keys=True)
@@ -800,6 +815,15 @@ def MergeChangelogs(changelogs):
             if deletion not in changelog["Deletions"]:
                 changelog["Deletions"][deletion] = log["Deletions"][deletion]
     changelog = dict(sorted(changelog.items()))
+    def sort_key(item):
+        key, value = item
+        if isinstance(key, int):
+            return f"{key:010d}"
+        return str(key)
+    
+    for key in ["Changes", "Additions", "Deletions"]:
+        if key in changelog:
+            changelog[key] = dict(sorted(changelog[key].items(), key=sort_key))
     return changelog
 
 # Analyzes a directory of mods, generates a combined changelog, and generates a RESTBL from it
@@ -875,8 +899,11 @@ def gen_changelog(restbl_path, format, mod_path=None):
     print("Generating changelog...")
     if format == 'json':
         changelog = restbl.GenerateChangelog(mod_path)
+        print(f"Generated changelog with {len(changelog.get('Changes', {}))} changes, {len(changelog.get('Additions', {}))} additions, {len(changelog.get('Deletions', {}))} deletions")
+        sorted_changelog = restbl._SortChangelog(changelog)
         with open('changelog.json', 'w') as f:
-            json.dump(changelog, f, indent=4)
+            json.dump(sorted_changelog, f, indent=4)
+        print(f"Changelog saved to: {os.path.abspath('changelog.json')}")
     elif format == 'rcl':
         restbl.GenerateRcl(mod_path=mod_path)
     elif format == 'yaml':
