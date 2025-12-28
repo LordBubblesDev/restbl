@@ -13,6 +13,7 @@ from restbl import (
     Restbl, MergeMods, GenerateRestblFromSingleMod,
     MergeChangelogs, apply_patches, gen_changelog, get_correct_path
 )
+import restbl
 
 IS_SWITCH_BUILD = False
 try:
@@ -67,6 +68,7 @@ def open_tool():
             messagebox.showerror("Error", "Please enter a correct mod folder path.")
             return
         version = version_map[version_combobox.get()]
+        restbl.ROMFS_FOLDER = "romfslite" if romfslite_var.get() else "romfs"
         calculate_single_mod_button.configure(text="Please wait...", fg_color="#26ac15", text_color="#4f4f4f", state="disabled"), app.update()
         GenerateRestblFromSingleMod(mod_path, restbl_to_patch, version, compress_var.get(), use_checksums_var.get(), verbose_var.get(), dev_mode_var.get())
         calculate_single_mod_button.configure(text="Calculate (single mod)", fg_color="#1f6aa5", text_color="white", state="normal"), app.update(), on_completion()
@@ -77,6 +79,7 @@ def open_tool():
             messagebox.showerror("Error", "Please enter a correct mod folder path.")
             return
         version = version_map[version_combobox.get()]
+        restbl.ROMFS_FOLDER = "romfslite" if romfslite_var.get() else "romfs"
         calculate_restbl_button.configure(text="Please wait...", fg_color="#26ac15", text_color="#4f4f4f", state="disabled"), app.update()
         MergeMods(mod_path, restbl_to_patch, version, compress_var.get(), delete_var.get(), smart_analyze_var.get(), use_checksums_var.get(), verbose_var.get(), dev_mode_var.get())
         calculate_restbl_button.configure(text="Calculate RESTBL", fg_color="#1f6aa5", text_color="white", state="normal"), app.update(), on_completion()
@@ -112,10 +115,12 @@ def open_tool():
     verbose_var.grid(row=1, column=1, padx=10, pady=5, sticky='nsew')
     dev_mode_var = ctk.CTkCheckBox(master=options_frame, text="Dev Mode")
     dev_mode_var.grid(row=1, column=2, padx=10, pady=5, sticky='nsew')
+    romfslite_var = ctk.CTkCheckBox(master=options_frame, text="Use romfslite")
+    romfslite_var.grid(row=2, column=0, padx=10, pady=5, sticky='nsew')
 
     # Version selection
     version_container = ctk.CTkFrame(master=options_frame)
-    version_container.grid(row=2, column=0, columnspan=3, sticky='ew', padx=5, pady=5)
+    version_container.grid(row=3, column=0, columnspan=3, sticky='ew', padx=5, pady=5)
     version_center_container = ctk.CTkFrame(master=version_container)
     version_center_container.pack(fill='x', expand=True)
     version_elements = ctk.CTkFrame(master=version_center_container)
@@ -343,6 +348,7 @@ def open_tool():
                 (log_restbl_path.endswith(('.rsizetable', '.rsizetable.zs')))):
             messagebox.showerror("Error", "Please select a valid RESTBL file")
             return
+        restbl.ROMFS_FOLDER = "romfslite" if romfslite_var.get() else "romfs"
         generate_changelog_button.configure(text="Please wait...", fg_color="#26ac15", text_color="#4f4f4f", state="disabled"), app.update()
         gen_changelog(log_restbl_path, format_combobox.get(), mod_strings_path if mod_strings_path else None)
         generate_changelog_button.configure(text="Generate Changelog", fg_color="#1f6aa5", text_color="white", state="normal"), app.update()

@@ -24,6 +24,7 @@ def get_correct_path(relative_path):
     return os.path.join(base_path, relative_path)
 
 DEV_MODE = False
+ROMFS_FOLDER = "romfs"
 version = None
 
 game_file_extensions = [
@@ -160,7 +161,7 @@ class Restbl:
         
         # If mod path is provided, add its strings
         if mod_path and os.path.isdir(mod_path):
-            mod_strings = GetStringList(os.path.join(mod_path, 'romfs'))
+            mod_strings = GetStringList(os.path.join(mod_path, ROMFS_FOLDER))
             paths.extend(mod_strings)
         
         # Remove duplicates while preserving order
@@ -359,7 +360,7 @@ class Restbl:
 
     # Changelog from analyzing mod directory
     def GenerateChangelogFromMod(self, mod_path, checksum=False, verbose=False, version=None):
-        info = GetInfoWithChecksum(mod_path + '/romfs', verbose, version) if checksum else GetInfo(mod_path + '/romfs', version, verbose)
+        info = GetInfoWithChecksum(mod_path + '/' + ROMFS_FOLDER, verbose, version) if checksum else GetInfo(mod_path + '/' + ROMFS_FOLDER, version, verbose)
         changelog = {"Changes" : {}, "Additions" : {}, "Deletions" : {}}
         if not self.hashmap:
             self._GenerateHashmap()
@@ -394,7 +395,7 @@ class Restbl:
         mods = [mod for mod in os.listdir(mod_path) if os.path.isdir(os.path.join(mod_path, mod))]
         for mod in mods:
             suffix = '.Nin_NX_NVN' if version >= 140 else ''
-            restbl_path = os.path.join(mod_path, mod, 'romfs/System/Resource/ResourceSizeTable.Product.' + str(version).replace('.', '') + suffix + '.rsizetable.zs')
+            restbl_path = os.path.join(mod_path, mod, ROMFS_FOLDER + '/System/Resource/ResourceSizeTable.Product.' + str(version).replace('.', '') + suffix + '.rsizetable.zs')
             if smart_analysis:
                 if os.path.exists(restbl_path):
                     print(f"Found RESTBL: {restbl_path}")
@@ -473,8 +474,8 @@ def GetFileLists(mod_path):
     mods = [mod for mod in os.listdir(mod_path) if os.path.isdir(os.path.join(mod_path, mod))]
     files = {}
     for mod in mods:
-        if os.path.exists(os.path.join(mod_path, mod) + "/romfs"):
-            files[mod] = GetStringList(os.path.join(mod_path, mod) + "/romfs")
+        if os.path.exists(os.path.join(mod_path, mod) + "/" + ROMFS_FOLDER):
+            files[mod] = GetStringList(os.path.join(mod_path, mod) + "/" + ROMFS_FOLDER)
     return files
 
 # Same as above but stores the estimated entry size as well
@@ -607,7 +608,10 @@ def GetInfoWithChecksum(romfs_path, verbose=False, version=None):
                                     for f in archive_info:
                                         add = False
                                         full_path = full_path.replace("\\", "/")
-                                        full_path = full_path.split("romfs/", 1)[-1]
+                                        full_path = full_path.split(ROMFS_FOLDER + "/", 1)[-1]
+                                        # Uncomment to find specific files in .pack archives
+                                        # if "FldObj_Bow_Base.game__component__ShopParam" in f["Name"]:
+                                        #     print(f"Found FldObj_Bow_Base.game__component__ShopParam in pack file: {filepath}")
                                         try:
                                             cs = xxhash.xxh64_intdigest(f["Data"])
                                             path_for_checksum = (full_path + "/" + f["Name"])
@@ -639,7 +643,7 @@ def GetInfoList(mod_path):
     mods = [mod for mod in os.listdir(mod_path) if os.path.isdir(os.path.join(mod_path, mod))]
     files = {}
     for mod in mods:
-        files[mod] = GetInfo(os.path.join(mod_path, mod) + "/romfs")
+        files[mod] = GetInfo(os.path.join(mod_path, mod) + "/" + ROMFS_FOLDER)
     return files
 
 # These are estimates for some file types, would be nice to have more precise values
@@ -832,7 +836,7 @@ def MergeMods(mod_path, restbl_path='', version=141, compressed=True, delete=Fal
         global DEV_MODE
         DEV_MODE = dev_mode
         start_time = time.time()
-        directory = os.path.join(mod_path, "00_MERGED_RESTBL", "romfs", "System", "Resource")
+        directory = os.path.join(mod_path, "00_MERGED_RESTBL", ROMFS_FOLDER, "System", "Resource")
         os.makedirs(directory, exist_ok=True)
         if not(os.path.exists(restbl_path)):
             print("Creating empty resource size table...")
@@ -951,7 +955,7 @@ def GenerateRestblFromSingleMod(mod_path, restbl_path='', version=141, compresse
         start_time = time.time()
         if not(os.path.exists(restbl_path)):
             print("Creating empty resource size table...")
-            directory = os.path.join(mod_path, "romfs", "System", "Resource")
+            directory = os.path.join(mod_path, ROMFS_FOLDER, "System", "Resource")
             os.makedirs(directory, exist_ok=True)
             suffix = '.Nin_NX_NVN' if version >= 140 else ''
             filename = os.path.join(directory, f'ResourceSizeTable.Product.{str(version).replace(".", "")}{suffix}.rsizetable')
@@ -1064,4 +1068,4 @@ if __name__ == "__main__":
         except Exception as e:
             print(f"\n\nError during ChecksumGenerator process: {str(e)}")
 
-    UpdateRestblTool()
+    #UpdateRestblTool()
