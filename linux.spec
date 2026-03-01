@@ -8,8 +8,7 @@ a = Analysis(
     binaries=[],
     datas=[
         ('checksums/checksums.bin', 'checksums/'),
-        ('restbl/*.json', 'restbl/'),
-        ('string_lists/*.txt', 'string_lists/'),
+        ('data/*.zs', 'data/'),
         ('dic/zsdic', 'dic/'),
         ('images/restbl.png', 'images/'),
         ('build_flags/*.flag', 'build_flags/'),

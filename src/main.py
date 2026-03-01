@@ -94,6 +94,7 @@ def open_tool():
         '1.4.0': 140,
         '1.4.1': 141,
         '1.4.2': 142,
+        '1.4.3': 143,
     }
 
     # Options Frame
@@ -129,7 +130,7 @@ def open_tool():
     version_label.pack(side='left', padx=(0, 5))
     version_combobox = ctk.CTkComboBox(master=version_elements, values=list(version_map.keys()), width=100, state="readonly")
     version_combobox.pack(side='left')
-    version_combobox.set("1.4.2")
+    version_combobox.set("1.4.3")
 
     # Set column configurations to distribute space evenly
     options_frame.grid_columnconfigure(0, weight=1)
@@ -392,7 +393,7 @@ if __name__ == "__main__":
         parser.add_argument('-cs', '--use-checksums', action='store_true', help='[Recommended] Use checksums')
         parser.add_argument('-m', '--mod-path', type=str, help='Mandatory for actions "merge-mods" and "single-mod"')
         parser.add_argument('-r', '--restbl-path', type=str, help='(Optional) Path to a RESTBL file to patch when calculating entries for mods')
-        parser.add_argument('-ver', '--version', type=int, default=142, help='(Optional) TotK version - default: 142')
+        parser.add_argument('-ver', '--version', type=int, default=143, help='(Optional) TotK version - default: 143')
 
         # Arguments for 'merge-mods' action
         merge_mods_group = parser.add_argument_group('merge-mods')

@@ -36,6 +36,52 @@ game_file_extensions = [
     '.png', '.quad', '.sarc', '.tscb', '.txt', '.txtg', '.vsts', '.wbr', '.zs'
 ]
 
+_STRING_LIST_CACHE = None
+_JSON_SARC_ARCHIVE = None
+_RESTBL_JSON_CACHE = {}
+
+
+def _load_merged_string_list():
+    global _STRING_LIST_CACHE
+    if _STRING_LIST_CACHE is not None:
+        return _STRING_LIST_CACHE
+
+    strings_path = get_correct_path(os.path.join("data", "strings.txt.zs"))
+    zs_helper = zstd.Zstd()
+    decompressed = zs_helper.Decompress(strings_path, with_dict=False, no_output=True)
+    text = decompressed.decode("utf-8")
+    _STRING_LIST_CACHE = [line for line in text.splitlines() if line]
+    return _STRING_LIST_CACHE
+
+
+def _load_restbl_json_from_archive(version_str):
+    global _JSON_SARC_ARCHIVE, _RESTBL_JSON_CACHE
+
+    if version_str in _RESTBL_JSON_CACHE:
+        return _RESTBL_JSON_CACHE[version_str]
+
+    if _JSON_SARC_ARCHIVE is None:
+        archive_path = get_correct_path(os.path.join("data", "jsontables.sarc.zs"))
+        zs_helper = zstd.Zstd()
+        decompressed = zs_helper.Decompress(archive_path, with_dict=False, no_output=True)
+        _JSON_SARC_ARCHIVE = sarc.Sarc(decompressed, filename="jsontables.sarc")
+
+    target_name = f"ResourceSizeTable.Product.{version_str}.rsizetable.json"
+    for entry in _JSON_SARC_ARCHIVE.files:
+        if os.path.basename(entry["Name"]) == target_name:
+            json_bytes = entry["Data"]
+            data = json.loads(
+                json_bytes.decode("utf-8"),
+                object_pairs_hook=lambda d: {
+                    int(k) if isinstance(k, str) and k.isdigit() else k: v
+                    for k, v in d
+                },
+            )
+            _RESTBL_JSON_CACHE[version_str] = data
+            return data
+
+    raise FileNotFoundError(f"Could not find {target_name} in jsontables.sarc.zs")
+
 class Restbl:
     def __init__(self, filepath): # Accepts both compressed and decompressed files
         if os.path.splitext(filepath)[1] in ['.zs', '.zstd']:
@@ -135,29 +181,14 @@ class Restbl:
     # Generates mapping of CRC32 hashes to filepaths
     def _GenerateHashmap(self, paths=[]):
         if paths == []:
-            version = os.path.basename(self.filename).split('.')[2]
-            string_list = "string_lists/" + version.replace('.', '') + ".txt"
-            string_list = get_correct_path(string_list)
-            paths = []
-            with open(string_list, 'r') as strings:
-                for line in strings:
-                    paths.append(line[:-1])
+            paths = _load_merged_string_list()
         for path in paths:
             if path not in self.collision_table:
                 self.hashmap[binascii.crc32(path.encode('utf-8'))] = path
         return self.hashmap
 
     def _GenerateHashmapWithMod(self, mod_path=None):
-        # First load the base string list
-        version = os.path.basename(self.filename).split('.')[2]
-        string_list = "string_lists/" + version.replace('.', '') + ".txt"
-        string_list = get_correct_path(string_list)
-        paths = []
-        
-        # Load base strings
-        with open(string_list, 'r') as strings:
-            for line in strings:
-                paths.append(line[:-1])
+        paths = list(_load_merged_string_list())
         
         # If mod path is provided, add its strings
         if mod_path and os.path.isdir(mod_path):
@@ -223,11 +254,7 @@ class Restbl:
 
     # Changelog comparing to the vanilla file
     def GenerateChangelog(self, mod_path=None):
-        original_filepath = "restbl/ResourceSizeTable.Product." + self.game_version + ".rsizetable.json"
-        original_filepath = get_correct_path(original_filepath)
-        print(f"Loading original RESTBL from: {original_filepath}")
-        with open(original_filepath, 'r') as file:
-            original = json.load(file, object_pairs_hook=lambda d: {int(k) if k.isdigit() else k: v for k, v in d})
+        original = _load_restbl_json_from_archive(self.game_version)
         
         # Generate hashmap with mod strings if provided
         self._GenerateHashmapWithMod(mod_path)
@@ -301,10 +328,7 @@ class Restbl:
         changelog = {"Changes" : {}, "Additions" : {}, "Deletions" : {}}
         with open(yaml_path, 'r') as yml:
             patch = yaml.safe_load(yml)
-        original_filepath = "restbl/ResourceSizeTable.Product." + self.game_version + ".rsizetable.json"
-        original_filepath = get_correct_path(original_filepath)
-        with open(original_filepath, 'r') as file:
-            original = json.load(file, object_pairs_hook=lambda d: {int(k) if k.isdigit() else k: v for k, v in d})
+        original = _load_restbl_json_from_archive(self.game_version)
         for change in patch:
             hash = binascii.crc32(change.encode('utf-8'))
             if hash in original["Hash Table"] or change in original["Collision Table"]:
@@ -365,8 +389,7 @@ class Restbl:
         if not self.hashmap:
             self._GenerateHashmap()
         strings = set(self.hashmap.values())
-        with open(get_correct_path('restbl/ResourceSizeTable.Product.' + self.game_version + '.rsizetable.json'), 'r') as f:
-            defaults = json.load(f, object_pairs_hook=lambda d: {int(k) if k.isdigit() else k: v for k, v in d})
+        defaults = _load_restbl_json_from_archive(self.game_version)
         for file, file_info in info.items():
             if os.path.splitext(file)[1] not in ['.bwav', '.rsizetable'] and os.path.splitext(file)[0] != r"Pack\ZsDic":
                 hash = binascii.crc32(file.encode()) if isinstance(file, str) else file
@@ -417,11 +440,28 @@ class Restbl:
     # Loads the vanilla RESTBL values into the object
     @lru_cache(maxsize=None)
     def _load_json_file(self, filepath):
-        with open(filepath, 'r') as f:
-            return json.load(f, object_pairs_hook=lambda d: {int(k) if k.isdigit() else k: v for k, v in d})
+        filename = os.path.basename(filepath)
+        parts = filename.split(".")
+        if len(parts) >= 4 and parts[0] == "ResourceSizeTable" and parts[1] == "Product":
+            version_str = parts[2]
+            return _load_restbl_json_from_archive(version_str)
+        with open(filepath, "r") as f:
+            return json.load(
+                f,
+                object_pairs_hook=lambda d: {
+                    int(k) if isinstance(k, str) and k.isdigit() else k: v
+                    for k, v in d
+                },
+            )
 
     def LoadDefaults(self):
-        data = self._load_json_file(get_correct_path('restbl/ResourceSizeTable.Product.' + self.game_version + '.rsizetable.json'))
+        data = self._load_json_file(
+            get_correct_path(
+                "restbl/ResourceSizeTable.Product."
+                + self.game_version
+                + ".rsizetable.json"
+            )
+        )
         self.hash_table = data["Hash Table"]
         self.collision_table = data["Collision Table"]
 
@@ -1005,6 +1045,59 @@ if __name__ == "__main__":
     import subprocess
     import shutil
 
+    def MergeStringLists():
+        string_lists_dir = r"F:\dev\restbl-master\string_lists"
+        data_dir = r"F:\dev\restbl-master\data"
+        os.makedirs(data_dir, exist_ok=True)
+        output_txt = os.path.join(data_dir, "strings.txt")
+
+        string_lists = [
+            i
+            for i in os.listdir(string_lists_dir)
+            if os.path.isfile(os.path.join(string_lists_dir, i))
+            and os.path.splitext(i)[1].lower() == ".txt"
+        ]
+
+        all_lines = set()
+        for string_list in string_lists:
+            with open(os.path.join(string_lists_dir, string_list), "r", encoding="utf-8") as f:
+                for line in f:
+                    line = line.rstrip("\r\n")
+                    if line:
+                        all_lines.add(line)
+
+        sorted_lines = sorted(all_lines)
+        with open(output_txt, "w", encoding="utf-8") as f:
+            for line in sorted_lines:
+                f.write(line + "\n")
+
+        zs = zstd.Zstd()
+        zs.Compress(output_txt, output_dir=data_dir, with_dict=False)
+        os.remove(output_txt)
+
+    def PackJsonTables():
+        json_root = r"F:\dev\restbl-master\restbl"
+        data_dir = r"F:\dev\restbl-master\data"
+        os.makedirs(data_dir, exist_ok=True)
+
+        archive = sarc.Sarc(json_root)
+        archive.files = [
+            {
+                "Name": os.path.basename(f["Name"]).replace("\\", "/"),
+                "Data": f["Data"],
+            }
+            for f in archive.files
+            if f["Name"].lower().endswith(".json")
+        ]
+
+        output_sarc_name = "jsontables.sarc"
+        output_sarc_path = os.path.join(data_dir, output_sarc_name)
+        archive.CreateArchive(filename=output_sarc_name, output_dir=data_dir)
+
+        zs = zstd.Zstd()
+        zs.Compress(output_sarc_path, output_dir=data_dir, with_dict=False)
+        os.remove(output_sarc_path)
+
     def UpdateRestblTool():
         version_map = {
             '1.0.0',
@@ -1015,7 +1108,8 @@ if __name__ == "__main__":
             '1.2.1',
             '1.4.0',
             '1.4.1',
-            '1.4.2'
+            '1.4.2',
+            '1.4.3'
         }
         
         # Convert RESTBL to JSON
@@ -1067,5 +1161,10 @@ if __name__ == "__main__":
             print("\n\nSuccessfully generated checksums for all versions")
         except Exception as e:
             print(f"\n\nError during ChecksumGenerator process: {str(e)}")
+        
+        print("Merging string lists...")
+        MergeStringLists()
+        print("Packing JSON tables...")
+        PackJsonTables()
 
     #UpdateRestblTool()

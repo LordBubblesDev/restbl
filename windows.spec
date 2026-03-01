@@ -9,9 +9,8 @@ a = Analysis(
     datas=[
         ('checksums/checksums.bin', 'checksums/'),
         ('images/restbl.ico', 'images/'),
-        ('restbl/*.json', 'restbl/'),
+        ('data/*.zs', 'data/'),
         ('dic/zsdic', 'dic/'),
-        ('string_lists/*.txt', 'string_lists/'),
         ('build_flags/*.flag', 'build_flags/'),
     ],
     hiddenimports=[],

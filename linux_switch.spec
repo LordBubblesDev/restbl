@@ -9,8 +9,7 @@ a = Analysis(
     datas=[
         ('build_flags/*.flag', 'build_flags/'),
         ('checksums/checksums.bin', 'checksums/'),
-        ('restbl/*.json', 'restbl/'),
-        ('string_lists/*.txt', 'string_lists/'),
+        ('data/*.zs', 'data/'),
         ('dic/zsdic', 'dic/'),
         ('images/restbl.png', 'images/'),
     ],

@@ -1,7 +1,7 @@
 __pycache__/
 test*
 patches/
-build/
+build*
 dist/
 *.pyc
 *.json
